@@ -39,6 +39,6 @@ The generator creates a Vite/React workspace, applies the shared theme and confi
 npm run check
 ```
 
-The root production build assembles the hub and every prototype into one static output at `apps/prototype-hub/dist`. That folder is the future Vercel deployment artifact.
+The root production build assembles the hub and every prototype into one static output at `apps/prototype-hub/dist`. Vercel publishes that artifact at [wildcrown.vercel.app](https://wildcrown.vercel.app).
 
 See [Architecture](docs/ARCHITECTURE.md) and [Vercel setup](docs/VERCEL.md).

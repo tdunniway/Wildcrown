@@ -1,6 +1,10 @@
-# Vercel deployment plan
+# Vercel deployment
 
-The repository is prepared for a single static Vercel project, but it is intentionally not linked or deployed yet.
+The repository is connected to the `auxerion-projects/wildcrown` Vercel project and deploys from the `main` branch of `tdunniway/Wildcrown`.
+
+- Production: [wildcrown.vercel.app](https://wildcrown.vercel.app)
+- Prototype hub: `/`
+- Crown Arena: `/prototypes/arena-war-table/`
 
 ## Recommended project settings
 
@@ -10,14 +14,19 @@ The repository is prepared for a single static Vercel project, but it is intenti
 - Output directory: `apps/prototype-hub/dist`
 - Framework preset: Other
 
-The checked-in `vercel.json` supplies the build and output settings. `.vercel/` remains local and ignored.
+The checked-in `vercel.json` supplies the build and output settings. Local project linkage in `.vercel/` remains ignored by Git.
 
-## Link later
+## Local workflow
 
 ```powershell
-vercel link
+vercel link --project wildcrown --scope auxerion-projects
 vercel build
-vercel deploy
+vercel deploy              # preview
+vercel deploy --prod       # production, only when explicitly requested
 ```
 
-Run these only when the repository is ready to become a shared preview. No database, authentication, or secret environment variables are required for the current static prototypes.
+Pushes to `main` also create production deployments through the connected GitHub repository. No database, authentication, or application secrets are required for the current static prototypes.
+
+## Verified production state
+
+On 2026-10-11, the hub and Arena route loaded successfully, a complete combat round resolved correctly, and the browser console contained no warnings or errors.

@@ -51,3 +51,9 @@ Assembled build verification: hub + 1 active prototype passed
 - One registry drives the hub, local URLs, lifecycle status, and production assembly.
 - One static artifact will let Vercel host the hub and all active prototypes together.
 - Vercel linkage, cloud build verification, and deployment are deferred until explicitly requested.
+
+## Deployment follow-up
+
+On 2026-10-11, the repository was connected to the existing `auxerion-projects/wildcrown` Vercel project. Production is live at `https://wildcrown.vercel.app`, deploys from GitHub `main`, and serves the assembled hub plus registered prototype routes.
+
+Production verification covered the hub, the nested Arena route, a resolved combat round, and browser console errors. All checks passed.

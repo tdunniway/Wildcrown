@@ -34,7 +34,7 @@ export function App() {
           </div>
           <div>
             <dt>Build</dt>
-            <dd>Vercel-ready</dd>
+            <dd>Live</dd>
           </div>
         </dl>
       </header>
