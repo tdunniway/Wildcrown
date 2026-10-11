@@ -22,6 +22,8 @@ Both calls failed because the REA transport closed. A separate attempt to prepar
 
 ## Verification
 
+- Workspace-wide `npm run check`: passed after the gameplay expansion.
+
 ```powershell
 npm run test:combat
 npm run build
@@ -46,3 +48,26 @@ At `http://localhost:4173/`, the QA pass selected `Arrow Storm`, selected Vex's 
 - New public intent: Branna's `Arcstorm`, targeting all champions.
 
 Browser log inspection showed Vite connection diagnostics only and no application warning or error.
+
+## Gameplay depth pass — 2026-10-11
+
+Implemented and verified three connected layers:
+
+- Opening orders now create readable counters: Flank interrupts support, Press punishes the acting rival, and Hold guards a threatened lead.
+- Correct doctrine reads generate Crown Momentum. At three momentum, Crown Break adds 18 damage and denies rival support.
+- The command deck now previews damage dealt/taken, shows the rival support tell, explains assists, and carries score, rank, combat stats, and escalating elite tiers into the result loop.
+
+```powershell
+npm run test:combat
+npm run build
+npm run test:sites
+npm run check
+```
+
+Focused results before the workspace-wide gate:
+
+- Combat engine: 7 passed, 0 failed.
+- Production build and Sites packaging: passed.
+- Sites worker: 4 passed, 0 failed.
+
+Browser verification used the project-owned server at `http://127.0.0.1:4174/` because an older unrelated process was already occupying port 4173. The playthrough verified a Flank forecast of 28 dealt / 14 taken, support interruption in the causal combat log, momentum progression, and an enabled Crown Break forecast of 38 dealt / 26 taken. The 1440 × 900 layout preserved the selected War Table art and kept all command controls visible.

@@ -6,7 +6,9 @@ import {
   abilityIsReady,
   createCombatState,
   getEnemyIntent,
+  getPlanForecast,
   resolveRound,
+  scoreCombat,
   validatePlan,
 } from "../src/combatEngine.js";
 
@@ -87,4 +89,66 @@ test("legal fallback play always reaches a result without deadlocking", () => {
 
   assert.ok(state.outcome, "combat should reach victory, defeat, or draw");
   assert.ok(resolvedRounds < 30, `combat took ${resolvedRounds} rounds`);
+});
+
+test("Flank converts a correct support read into damage and momentum", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"], {
+    orders: ["Flank", "Press", "Hold"],
+  });
+  const plan = {
+    leadId: "lyra-0",
+    abilityId: "quickshot",
+    assistId: "brace",
+    targetId: "branna-rival",
+    crownBreak: false,
+  };
+
+  const next = resolveRound(state, plan);
+
+  assert.equal(next.enemies[1].hp, 80);
+  assert.equal(next.momentum, 1);
+  assert.equal(next.lastClash.doctrineTrigger, "Flank intercept");
+  assert.equal(next.lastClash.enemySupportCancelled, true);
+});
+
+test("Crown Break spends full momentum and interrupts enemy support", () => {
+  const state = {
+    ...createCombatState(["Lyra", "Torin", "Vex"]),
+    momentum: 3,
+  };
+  const plan = {
+    leadId: "lyra-0",
+    abilityId: "quickshot",
+    assistId: "brace",
+    targetId: "kael",
+    crownBreak: true,
+  };
+
+  const forecast = getPlanForecast(state, plan);
+  const next = resolveRound(state, plan);
+
+  assert.equal(forecast.damageDealt, 38);
+  assert.equal(next.enemies[0].hp, 54);
+  assert.equal(next.momentum, 0);
+  assert.equal(next.stats.crownBreaks, 1);
+  assert.equal(next.lastClash.enemySupportCancelled, true);
+});
+
+test("elite tiers increase rival durability and threat", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"], { tier: 3 });
+  const intent = getEnemyIntent(state);
+
+  assert.equal(state.enemies[0].maxHp, 120);
+  assert.equal(intent.damage, 32);
+  assert.equal(state.tier, 3);
+});
+
+test("completed combat produces a readable score and rank", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"]);
+  state.outcome = "victory";
+  state.stats.doctrineTriggers = 2;
+  const result = scoreCombat(state);
+
+  assert.ok(result.score > 0);
+  assert.ok(["Steel", "Crown", "Sovereign"].includes(result.rank));
 });

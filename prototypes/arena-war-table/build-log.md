@@ -22,3 +22,12 @@
 - Browser QA: completed a manual planned round (`Arrow Storm` + `Smoke Veil` targeting Branna) and verified the next round reflected 2 remaining Wildlight, ability/assist cooldowns, the expected HP changes, and a newly revealed rival intent. Browser diagnostics contained no application warnings or errors.
 - Automated checks: `npm run test:combat` passed 3/3, including a 30-round no-deadlock guard; `npm run build` passed; `npm run test:sites` passed 4/4.
 - Detailed command record: `qa/playable-combat-command-log.md`.
+
+## Tactical depth and replay pass — 2026-10-11
+
+- Made the setup doctrines mechanically meaningful across combat: Flank denies support, Press rewards targeting the acting enemy, and Hold protects a threatened lead.
+- Added Crown Momentum and the three-charge Crown Break finisher, with exact pre-commit outcome forecasting.
+- Expanded combat readability with rival support tells, doctrine labels, full assist descriptions, dealt/taken forecasts, causal counter logs, and tier display.
+- Added post-match score, rank, combat stats, same-tier replay, and stronger elite-tier challenges.
+- Browser-tested the complete doctrine-to-momentum-to-Crown-Break loop at 1440 × 900 against the current workspace server.
+- Automated verification: combat engine 7/7, production build passed, Sites worker 4/4.
