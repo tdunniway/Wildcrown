@@ -204,7 +204,7 @@ export function App() {
       >
         <img
           className="arena-reference"
-          src="/assets/arena-war-table-reference.png"
+          src={`${import.meta.env.BASE_URL}assets/arena-war-table-reference.png`}
           alt="Wildcrown Crown Arena war table"
         />
         <div className="screen-vignette" />
