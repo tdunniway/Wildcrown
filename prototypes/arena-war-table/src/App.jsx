@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   DOCTRINES,
   HERO_LIBRARY,
+  TACTICS,
   abilityIsReady,
   createCombatState,
   getEnemyForecast,
+  previewRound,
   resolveRound,
   validatePlan,
 } from "./combatEngine.js";
@@ -41,6 +43,8 @@ function buildDefaultPlan(state) {
     abilityId: lead ? HERO_LIBRARY[lead.name].abilities[0].id : "",
     assistId: assist?.id ?? "brace",
     targetId: target?.id ?? "",
+    tacticId: "",
+    useSurge: false,
   };
 }
 
@@ -65,7 +69,6 @@ export function App() {
   const [phase, setPhase] = useState("setup");
   const [combat, setCombat] = useState(null);
   const [plan, setPlan] = useState(null);
-  const [seconds, setSeconds] = useState(12);
   const [lastImpact, setLastImpact] = useState(null);
 
   const available = useMemo(() => {
@@ -85,8 +88,13 @@ export function App() {
         (entry) => entry.id === plan?.abilityId,
       )
     : null;
+  const tactic = TACTICS[plan?.tacticId] ?? null;
   const planError =
     combat && plan ? validatePlan(combat, plan) : "Choose a plan.";
+  const preview = useMemo(
+    () => (combat && plan ? previewRound(combat, plan) : null),
+    [combat, plan],
+  );
 
   function chooseHero(hero) {
     if (editingSlot === null) return;
@@ -111,7 +119,6 @@ export function App() {
     );
     setCombat(initial);
     setPlan(buildDefaultPlan(initial));
-    setSeconds(12);
     setLastImpact(null);
     setPhase("battle");
     setToast("Round 1 — read the rival, then answer");
@@ -134,9 +141,9 @@ export function App() {
   }
 
   const commitCombat = useCallback(
-    (fallback = false) => {
+    () => {
       if (!combat || !plan || phase !== "battle") return;
-      const proposedPlan = fallback ? buildDefaultPlan(combat) : plan;
+      const proposedPlan = plan;
       const error = validatePlan(combat, proposedPlan);
       if (error) {
         setToast(error);
@@ -147,12 +154,11 @@ export function App() {
       setLastImpact({
         targetId: proposedPlan.targetId,
         actorId: proposedPlan.leadId,
+        tacticId: proposedPlan.tacticId,
+        outgoing: preview?.outgoing ?? 0,
+        incoming: preview?.incoming ?? 0,
       });
-      setToast(
-        fallback
-          ? "Deadline — safe fallback committed"
-          : "Plans revealed — clash resolving",
-      );
+      setToast("Plans revealed — clash resolving");
 
       window.setTimeout(() => {
         const next = resolveRound(combat, proposedPlan);
@@ -161,33 +167,18 @@ export function App() {
           setPhase("result");
         } else {
           setPlan(buildDefaultPlan(next));
-          setSeconds(12);
           setPhase("battle");
           setToast(`Round ${next.round} — new rival signals detected`);
         }
       }, 720);
     },
-    [combat, phase, plan],
+    [combat, phase, plan, preview],
   );
-
-  useEffect(() => {
-    if (phase !== "battle") return undefined;
-    const interval = window.setInterval(
-      () => setSeconds((current) => Math.max(0, current - 1)),
-      1000,
-    );
-    return () => window.clearInterval(interval);
-  }, [phase, combat?.round]);
-
-  useEffect(() => {
-    if (phase === "battle" && seconds === 0) commitCombat(true);
-  }, [commitCombat, phase, seconds]);
 
   function restart() {
     setPhase("setup");
     setCombat(null);
     setPlan(null);
-    setSeconds(12);
     setLastImpact(null);
     setToast("Adjust your three or opening doctrine");
   }
@@ -292,13 +283,9 @@ export function App() {
               <div
                 className={`intent-card ${forecast?.exact ? "is-exact" : "is-uncertain"}`}
               >
-                <span className="intent-icon">◉</span>
+                <span className="intent-icon">!</span>
                 <span>
-                  <small>
-                    {forecast?.exact
-                      ? "Scouted rival intent"
-                      : `Rival forecast · ${forecast?.confidence}%`}
-                  </small>
+                  <small>{forecast?.kind} intent detected</small>
                   <strong>
                     {forecast?.actorName} · {forecast?.headline}
                   </strong>
@@ -308,9 +295,9 @@ export function App() {
                   <small>{forecast?.description}</small>
                 </span>
               </div>
-              <div className={`timer-chip ${seconds <= 4 ? "is-urgent" : ""}`}>
-                <small>Lock in</small>
-                <strong>{seconds}</strong>
+              <div className="momentum-chip">
+                <small>Crown</small>
+                <strong>{combat.momentum}/3</strong>
               </div>
               <div className="energy-chip">
                 <small>Wildlight</small>
@@ -321,63 +308,152 @@ export function App() {
               </div>
             </header>
 
-            <aside className="squad-status" aria-label="Your squad status">
-              <p className="combat-kicker">Choose your lead</p>
-              {combat.heroes.map((hero, index) => {
-                const threatened = forecast?.targetIds.includes(hero.id);
-                return (
-                  <button
-                    key={hero.id}
-                    className={`unit-status ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
-                    data-risk={forecast?.exact ? "Target" : "At risk"}
-                    onClick={() => hero.hp > 0 && selectLead(hero)}
-                    disabled={hero.hp <= 0 || phase === "resolving"}
-                  >
-                    <span className="unit-index">{index + 1}</span>
-                    <span className="unit-copy">
-                      <strong>{hero.name}</strong>
-                      <small>
-                        {hero.role}
-                        {threatened ? " · under pressure" : ""}
-                      </small>
-                      <HealthBar value={hero.hp} max={hero.maxHp} />
-                    </span>
-                    <span className="hp-copy">{hero.hp}</span>
-                  </button>
-                );
-              })}
-            </aside>
+            <section
+              className={`battlefield-board ${phase === "resolving" ? "is-clashing" : ""}`}
+              aria-label="Arena battlefield"
+            >
+              <div className="battle-side allied-line">
+                <p className="combat-kicker">Your line · choose lead</p>
+                {combat.heroes.map((hero, index) => {
+                  const threatened = forecast?.targetIds.includes(hero.id);
+                  return (
+                    <button
+                      key={hero.id}
+                      className={`battle-unit is-ally ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${lastImpact?.actorId === hero.id && phase === "resolving" ? "is-striking" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
+                      onClick={() => hero.hp > 0 && selectLead(hero)}
+                      disabled={hero.hp <= 0 || phase === "resolving"}
+                    >
+                      <span className="unit-sigil">{hero.name.slice(0, 1)}</span>
+                      <span className="unit-copy">
+                        <strong>{hero.name}</strong>
+                        <small>
+                          {hero.role}
+                          {threatened ? " · threatened" : ""}
+                        </small>
+                        <HealthBar value={hero.hp} max={hero.maxHp} />
+                      </span>
+                      <span className="hp-copy">{hero.hp}</span>
+                      {plan.leadId === hero.id && (
+                        <span className="unit-tag">Lead {index + 1}</span>
+                      )}
+                      {phase === "resolving" && threatened && (
+                        <span className="floating-number is-damage">
+                          -{lastImpact?.incoming}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
-            <aside className="rival-status" aria-label="Choose a rival target">
-              <p className="combat-kicker">Choose target</p>
-              {combat.enemies.map((enemy) => (
-                <button
-                  key={enemy.id}
-                  className={`unit-status is-rival ${plan.targetId === enemy.id ? "is-selected" : ""} ${lastImpact?.targetId === enemy.id && phase === "resolving" ? "is-hit" : ""} ${hpClass(enemy.hp, enemy.maxHp)}`}
-                  onClick={() =>
-                    enemy.hp > 0 &&
-                    setPlan((current) => ({ ...current, targetId: enemy.id }))
-                  }
-                  disabled={enemy.hp <= 0 || phase === "resolving"}
-                >
-                  <span className="target-reticle">◎</span>
-                  <span className="unit-copy">
-                    <strong>{enemy.name}</strong>
-                    <small>{enemy.role}</small>
-                    <HealthBar value={enemy.hp} max={enemy.maxHp} hostile />
+              <div className="clash-core" aria-live="polite">
+                <div className="intent-rune">
+                  <small>Rival move</small>
+                  <strong>{forecast?.headline}</strong>
+                  <span>{forecast?.description}</span>
+                </div>
+                <div className="counter-callout">
+                  <small>Best response</small>
+                  <strong>{forecast?.counterLabel}</strong>
+                  <span>
+                    {tactic
+                      ? tactic.id === forecast?.counterTactic
+                        ? "Counter aligned"
+                        : "Line remains exposed"
+                      : "Choose your tactic"}
                   </span>
-                  <span className="hp-copy">{enemy.hp}</span>
-                </button>
-              ))}
-            </aside>
+                </div>
+                {preview && !preview.error && (
+                  <div
+                    className={`clash-preview ${preview.grade === "Hard counter" ? "is-counter" : "is-partial"}`}
+                  >
+                    <strong>{preview.grade}</strong>
+                    <span>{preview.outgoing} outgoing</span>
+                    <span>{preview.incoming} incoming</span>
+                    <span>{preview.prevented} denied</span>
+                    {preview.combo && <b>{preview.combo.name} chain</b>}
+                  </div>
+                )}
+                {phase === "resolving" && (
+                  <div className={`clash-fx is-${lastImpact?.tacticId}`}>
+                    <span />
+                    <strong>
+                      {preview?.combo?.name ?? tactic?.name ?? "Clash"}
+                    </strong>
+                  </div>
+                )}
+              </div>
+
+              <div className="battle-side rival-line">
+                <p className="combat-kicker">Rival line · choose target</p>
+                {combat.enemies.map((enemy) => (
+                  <button
+                    key={enemy.id}
+                    className={`battle-unit is-rival ${plan.targetId === enemy.id ? "is-selected" : ""} ${forecast?.actorName === enemy.name ? "is-acting" : ""} ${lastImpact?.targetId === enemy.id && phase === "resolving" ? "is-hit" : ""} ${hpClass(enemy.hp, enemy.maxHp)}`}
+                    onClick={() =>
+                      enemy.hp > 0 &&
+                      setPlan((current) => ({ ...current, targetId: enemy.id }))
+                    }
+                    disabled={enemy.hp <= 0 || phase === "resolving"}
+                  >
+                    <span className="unit-sigil">{enemy.name.slice(0, 1)}</span>
+                    <span className="unit-copy">
+                      <strong>{enemy.name}</strong>
+                      <small>
+                        {enemy.role}
+                        {forecast?.actorName === enemy.name ? " · acting" : ""}
+                      </small>
+                      <HealthBar value={enemy.hp} max={enemy.maxHp} hostile />
+                    </span>
+                    <span className="hp-copy">{enemy.hp}</span>
+                    {plan.targetId === enemy.id && (
+                      <span className="unit-tag">Target</span>
+                    )}
+                    {lastImpact?.targetId === enemy.id &&
+                      phase === "resolving" && (
+                        <span className="floating-number is-strike">
+                          -{lastImpact?.outgoing}
+                        </span>
+                      )}
+                  </button>
+                ))}
+              </div>
+            </section>
 
             <section
               className={`command-deck ${phase === "resolving" ? "is-resolving" : ""}`}
               aria-label="Combat plan controls"
             >
+              <div className="command-column tactic-column">
+                <p className="combat-kicker">
+                  <span>1</span> Tactical response
+                </p>
+                <div className="tactic-grid">
+                  {Object.values(TACTICS).map((entry) => (
+                    <button
+                      key={entry.id}
+                      className={`tactic-card ${plan.tacticId === entry.id ? "is-selected" : ""} ${forecast?.counterTactic === entry.id ? "is-recommended" : ""}`}
+                      onClick={() =>
+                        setPlan((current) => ({
+                          ...current,
+                          tacticId: entry.id,
+                        }))
+                      }
+                      disabled={phase === "resolving"}
+                    >
+                      <span className="tactic-code">{entry.code}</span>
+                      <span>
+                        <strong>{entry.name}</strong>
+                        <small>{entry.short}</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="command-column ability-column">
                 <p className="combat-kicker">
-                  <span>1</span> Lead ability · {lead?.name}
+                  <span>2</span> Lead ability · {lead?.name}
                 </p>
                 <div className="ability-grid">
                   {lead &&
@@ -415,7 +491,7 @@ export function App() {
 
               <div className="command-column assist-column">
                 <p className="combat-kicker">
-                  <span>2</span> Support
+                  <span>3</span> Hero chain
                 </p>
                 <div className="assist-grid">
                   {combat.heroes
@@ -437,7 +513,7 @@ export function App() {
                           <strong>{hero.name}</strong>
                           <small>
                             {ready
-                              ? HERO_LIBRARY[hero.name].assist.name
+                               ? `${HERO_LIBRARY[hero.name].assist.name} · ${HERO_LIBRARY[hero.name].assist.description}`
                               : `Ready round ${hero.assistReadyRound}`}
                           </small>
                         </button>
@@ -458,17 +534,34 @@ export function App() {
 
               <div className="lock-column">
                 <p className="combat-kicker">
-                  <span>3</span> Commit
+                  <span>4</span> Commit
                 </p>
                 <button
+                  className={`surge-toggle ${plan.useSurge ? "is-selected" : ""}`}
+                  onClick={() =>
+                    setPlan((current) => ({
+                      ...current,
+                      useSurge: !current.useSurge,
+                    }))
+                  }
+                  disabled={combat.momentum < 3 || phase === "resolving"}
+                >
+                  <strong>Crown Surge</strong>
+                  <small>
+                    {combat.momentum < 3
+                      ? `${combat.momentum}/3 momentum`
+                      : "+12 damage · spend momentum"}
+                  </small>
+                </button>
+                <button
                   className="lock-plan"
-                  onClick={() => commitCombat(false)}
+                  onClick={commitCombat}
                   disabled={Boolean(planError) || phase === "resolving"}
                 >
                   {phase === "resolving" ? "Resolving clash…" : "Lock plan"}
                   <small>
                     {planError ||
-                      `${ability?.name} → ${combat.enemies.find((enemy) => enemy.id === plan.targetId)?.name}`}
+                      `${tactic?.name} · ${ability?.name} → ${combat.enemies.find((enemy) => enemy.id === plan.targetId)?.name}`}
                   </small>
                 </button>
               </div>

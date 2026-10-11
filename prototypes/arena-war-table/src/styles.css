@@ -10,6 +10,573 @@
   --teal: #32c7dc;
 }
 
+/* Tactical combat v2: readable battlefield, counters, chains, and impact FX. */
+@media (min-width: 761px) and (min-aspect-ratio: 1 / 1) {
+  .combat-header {
+    grid-template-columns: 9% minmax(0, 1fr) 10% 20%;
+  }
+
+  .battlefield-board {
+    position: absolute;
+    z-index: 7;
+    top: 12.6%;
+    right: 20.5%;
+    bottom: 44.8%;
+    left: 20.5%;
+  }
+
+  .command-deck {
+    height: 31.5%;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.72fr) minmax(0, 1.15fr) minmax(0, 0.92fr);
+  }
+
+  .combat-log {
+    top: 21%;
+    left: 1.2%;
+    width: 18.2%;
+    min-height: 15%;
+    padding: 0.8%;
+    border: 1px solid rgb(217 169 76 / 38%);
+    border-left: 3px solid rgb(217 169 76 / 78%);
+    background: rgb(3 14 21 / 91%);
+  }
+}
+
+.momentum-chip {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(217 169 76 / 64%);
+  background: linear-gradient(180deg, rgb(48 34 12 / 98%), rgb(17 13 7 / 98%));
+  box-shadow: 0 0.55rem 1.3rem rgb(0 0 0 / 45%);
+}
+
+.momentum-chip small {
+  color: #c7ac70;
+  font-size: clamp(0.31rem, 0.53vw, 0.56rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.momentum-chip strong {
+  color: #ffe29a;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.66rem, 1.18vw, 1.25rem);
+}
+
+.battlefield-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.88fr) minmax(0, 1fr);
+  gap: 1.2%;
+  padding: 0.75%;
+  border: 1px solid rgb(217 169 76 / 45%);
+  background:
+    radial-gradient(circle at 50% 50%, rgb(49 122 130 / 22%), transparent 34%),
+    linear-gradient(90deg, rgb(5 31 39 / 95%), rgb(4 13 20 / 84%) 47% 53%, rgb(35 13 17 / 95%));
+  box-shadow:
+    inset 0 0 3rem rgb(1 7 11 / 72%),
+    0 1rem 2.5rem rgb(0 0 0 / 42%);
+  overflow: hidden;
+}
+
+.battlefield-board::before {
+  content: "";
+  position: absolute;
+  inset: 8% 33%;
+  border-right: 1px solid rgb(217 169 76 / 25%);
+  border-left: 1px solid rgb(217 169 76 / 25%);
+  pointer-events: none;
+}
+
+.battle-side,
+.clash-core {
+  position: relative;
+  min-width: 0;
+}
+
+.battle-side {
+  display: grid;
+  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+  gap: 2.5%;
+}
+
+.battle-unit {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: clamp(1.5rem, 2.6vw, 2.8rem) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4%;
+  padding: 3.5% 4%;
+  border: 1px solid rgb(67 145 154 / 58%);
+  background: linear-gradient(90deg, rgb(8 47 57 / 95%), rgb(4 22 30 / 94%));
+  color: #f4e5bf;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.battle-unit.is-rival {
+  border-color: rgb(168 63 54 / 62%);
+  background: linear-gradient(270deg, rgb(48 16 18 / 96%), rgb(17 14 21 / 95%));
+}
+
+.battle-unit:hover:not(:disabled),
+.battle-unit.is-selected {
+  z-index: 2;
+  border-color: #57dce2;
+  box-shadow: 0 0 1.1rem rgb(50 199 220 / 32%);
+  transform: translateX(1.5%);
+}
+
+.battle-unit.is-rival:hover:not(:disabled),
+.battle-unit.is-rival.is-selected {
+  border-color: #ff765f;
+  box-shadow: 0 0 1.1rem rgb(255 78 58 / 30%);
+  transform: translateX(-1.5%);
+}
+
+.battle-unit.is-threatened {
+  border-left: 3px solid #ff7661;
+}
+
+.battle-unit.is-acting {
+  background: linear-gradient(270deg, rgb(74 22 20 / 98%), rgb(22 15 22 / 96%));
+}
+
+.battle-unit:disabled {
+  cursor: default;
+  filter: grayscale(0.72);
+  opacity: 0.44;
+}
+
+.unit-sigil {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid #61cbd2;
+  border-radius: 50%;
+  background: radial-gradient(circle, #174956, #071a23 68%);
+  color: #d7fbf7;
+  font-family: Cinzel, Georgia, serif;
+  font-weight: 700;
+}
+
+.is-rival .unit-sigil {
+  border-color: #c65a4b;
+  background: radial-gradient(circle, #60221f, #1c0e13 68%);
+  color: #ffd1bd;
+}
+
+.battle-unit .unit-copy strong {
+  font-size: clamp(0.4rem, 0.7vw, 0.75rem);
+}
+
+.battle-unit .unit-copy small,
+.battle-unit .hp-copy {
+  font-size: clamp(0.25rem, 0.42vw, 0.46rem);
+}
+
+.unit-tag {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.16rem 0.35rem;
+  background: #1c6570;
+  color: #c8ffff;
+  font-size: clamp(0.2rem, 0.34vw, 0.38rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.is-rival .unit-tag {
+  background: #783126;
+  color: #ffd2bd;
+}
+
+.clash-core {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 5%;
+  text-align: center;
+}
+
+.intent-rune,
+.counter-callout,
+.clash-preview {
+  padding: 5%;
+  border: 1px solid rgb(217 169 76 / 38%);
+  background: rgb(2 10 16 / 84%);
+}
+
+.intent-rune small,
+.counter-callout small {
+  display: block;
+  color: #9baeb2;
+  font-size: clamp(0.22rem, 0.38vw, 0.41rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.intent-rune strong,
+.counter-callout strong {
+  display: block;
+  margin: 0.16rem 0;
+  color: #ffb49c;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.36rem, 0.66vw, 0.7rem);
+}
+
+.intent-rune span,
+.counter-callout span {
+  display: block;
+  color: #b7c7c8;
+  font-size: clamp(0.22rem, 0.38vw, 0.41rem);
+  line-height: 1.35;
+}
+
+.counter-callout {
+  border-color: rgb(65 190 199 / 52%);
+}
+
+.counter-callout strong {
+  color: #89eef0;
+}
+
+.clash-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.16rem 0.35rem;
+  color: #a9babc;
+  font-size: clamp(0.21rem, 0.36vw, 0.39rem);
+}
+
+.clash-preview strong,
+.clash-preview b {
+  grid-column: 1 / -1;
+  color: #efcf80;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.3rem, 0.52vw, 0.56rem);
+}
+
+.clash-preview.is-counter {
+  border-color: rgb(78 216 178 / 70%);
+  box-shadow: inset 0 0 1rem rgb(61 207 169 / 12%);
+}
+
+.clash-preview.is-counter strong {
+  color: #77e4bd;
+}
+
+.clash-fx {
+  position: absolute;
+  z-index: 10;
+  inset: 10% -65%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.clash-fx span {
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #7ef5ef, #fff1b2, #ff6c55, transparent);
+  box-shadow: 0 0 1.3rem #74eaf0;
+  animation: clash-streak 720ms ease-in-out both;
+}
+
+.clash-fx strong {
+  position: absolute;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid #f2cf75;
+  background: rgb(3 13 18 / 95%);
+  color: #ffe39c;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.45rem, 0.85vw, 0.9rem);
+  text-transform: uppercase;
+  animation: clash-title 820ms ease both;
+}
+
+.battle-unit.is-striking {
+  animation: ally-strike 720ms ease both;
+}
+
+.floating-number {
+  position: absolute;
+  z-index: 8;
+  top: 10%;
+  right: 10%;
+  color: #fff0b6;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.62rem, 1.2vw, 1.28rem);
+  font-weight: 700;
+  text-shadow: 0 0 0.8rem currentColor;
+  animation: float-damage 800ms ease-out both;
+}
+
+.floating-number.is-damage {
+  color: #ff8c7b;
+}
+
+.tactic-grid {
+  height: 79%;
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 3%;
+}
+
+.tactic-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: clamp(1.1rem, 1.7vw, 1.8rem) minmax(0, 1fr);
+  align-items: center;
+  gap: 6%;
+  padding: 4% 5%;
+  border: 1px solid rgb(75 116 126 / 55%);
+  background: #0a222d;
+  color: #d9e5e4;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tactic-card.is-recommended::after {
+  content: "COUNTER";
+  position: absolute;
+  top: 0.22rem;
+  right: 0.28rem;
+  color: #66e8ce;
+  font-size: clamp(0.18rem, 0.29vw, 0.32rem);
+  letter-spacing: 0.1em;
+}
+
+.tactic-card {
+  position: relative;
+}
+
+.tactic-card:hover:not(:disabled),
+.tactic-card.is-selected {
+  border-color: var(--teal);
+  background: linear-gradient(180deg, #123b47, #09232d);
+  box-shadow: inset 0 0 1rem rgb(50 199 220 / 16%);
+}
+
+.tactic-code {
+  display: grid;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid #7bdde0;
+  border-radius: 50%;
+  color: #bff6f2;
+  font-family: Cinzel, Georgia, serif;
+}
+
+.tactic-card strong,
+.tactic-card small {
+  display: block;
+}
+
+.tactic-card strong {
+  color: #f2d897;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.32rem, 0.58vw, 0.63rem);
+}
+
+.tactic-card small {
+  margin-top: 0.12rem;
+  color: #9bb0b6;
+  font-size: clamp(0.22rem, 0.36vw, 0.4rem);
+  line-height: 1.2;
+}
+
+.surge-toggle {
+  width: 100%;
+  height: 30%;
+  margin-bottom: 4%;
+  border: 1px solid rgb(217 169 76 / 48%);
+  background: rgb(44 31 12 / 74%);
+  color: #d8bd7f;
+  cursor: pointer;
+}
+
+.surge-toggle strong,
+.surge-toggle small {
+  display: block;
+}
+
+.surge-toggle strong {
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.28rem, 0.5vw, 0.54rem);
+}
+
+.surge-toggle small {
+  margin-top: 0.12rem;
+  font-size: clamp(0.2rem, 0.32vw, 0.35rem);
+}
+
+.surge-toggle:disabled {
+  cursor: default;
+  opacity: 0.72;
+  background: linear-gradient(180deg, rgb(17 35 43 / 96%), rgb(8 21 27 / 98%));
+  color: #b4cad0;
+}
+
+.surge-toggle.is-selected {
+  border-color: #ffe08d;
+  background: linear-gradient(180deg, #8f6928, #3c280e);
+  color: #fff0bd;
+  box-shadow: 0 0 1rem rgb(241 190 72 / 30%);
+}
+
+.lock-column .lock-plan {
+  height: 49%;
+}
+
+@keyframes clash-streak {
+  0% { opacity: 0; transform: scaleX(0.05); }
+  45% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(0.55); }
+}
+
+@keyframes clash-title {
+  0% { opacity: 0; transform: scale(0.72); }
+  35%, 72% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+@keyframes ally-strike {
+  35% { transform: translateX(13%); filter: brightness(1.45); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes float-damage {
+  0% { opacity: 0; transform: translateY(0.4rem) scale(0.75); }
+  35% { opacity: 1; transform: translateY(-0.2rem) scale(1); }
+  100% { opacity: 0; transform: translateY(-1.6rem) scale(1.08); }
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
+  .combat-header {
+    grid-template-columns: 3.2rem minmax(0, 1fr) 3.6rem;
+  }
+
+  .momentum-chip {
+    min-height: 3.8rem;
+  }
+
+  .energy-chip {
+    grid-column: 1 / -1;
+  }
+
+  .battlefield-board {
+    position: relative;
+    z-index: 7;
+    inset: auto;
+    width: 100%;
+    min-height: 30rem;
+    grid-template-columns: minmax(0, 1fr) minmax(6.6rem, 0.72fr) minmax(0, 1fr);
+    gap: 0.35rem;
+    padding: 0.65rem;
+    overflow: visible;
+  }
+
+  .battlefield-board::before {
+    inset: 5% 34%;
+  }
+
+  .battle-side {
+    gap: 0.38rem;
+  }
+
+  .battle-unit {
+    min-height: 5.3rem;
+    grid-template-columns: 1.7rem minmax(0, 1fr);
+    gap: 0.38rem;
+    padding: 0.48rem;
+  }
+
+  .battle-unit .hp-copy {
+    display: none;
+  }
+
+  .battle-unit .unit-copy strong {
+    font-size: 0.7rem;
+  }
+
+  .battle-unit .unit-copy small {
+    font-size: 0.5rem;
+    white-space: normal;
+  }
+
+  .clash-core {
+    gap: 0.45rem;
+  }
+
+  .intent-rune,
+  .counter-callout,
+  .clash-preview {
+    padding: 0.45rem 0.3rem;
+  }
+
+  .intent-rune strong,
+  .counter-callout strong {
+    font-size: 0.61rem;
+  }
+
+  .intent-rune span,
+  .counter-callout span,
+  .clash-preview {
+    font-size: 0.48rem;
+  }
+
+  .command-deck {
+    grid-template-columns: 1fr;
+  }
+
+  .tactic-grid {
+    height: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+    gap: 0.42rem;
+  }
+
+  .tactic-card {
+    min-height: 5.15rem;
+    display: block;
+    padding: 0.62rem 0.48rem;
+    text-align: center;
+  }
+
+  .tactic-code {
+    width: 1.45rem;
+    margin: 0 auto 0.38rem;
+  }
+
+  .tactic-card strong {
+    font-size: 0.67rem;
+  }
+
+  .tactic-card small {
+    font-size: 0.52rem;
+  }
+
+  .surge-toggle {
+    min-height: 3.45rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .lock-column .lock-plan {
+    min-height: 4.3rem;
+  }
+
+  .combat-log {
+    order: 4;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1585,5 +2152,69 @@ button:focus-visible {
     width: auto;
     transform: none;
     white-space: normal;
+  }
+}
+
+/* Keep v2 layout overrides after the legacy responsive rules. */
+@media (min-width: 761px) and (min-aspect-ratio: 1 / 1) {
+  body .combat-header {
+    grid-template-columns: 9% minmax(0, 1fr) 10% 20%;
+  }
+
+  body .battlefield-board {
+    position: absolute;
+    z-index: 7;
+    top: 12.6%;
+    right: 20.5%;
+    bottom: 44.8%;
+    left: 20.5%;
+  }
+
+  body .command-deck {
+    height: 31.5%;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.72fr) minmax(0, 1.15fr) minmax(0, 0.92fr);
+  }
+
+  body .combat-log {
+    top: 21%;
+    left: 1.2%;
+    width: 18.2%;
+    min-height: 15%;
+    padding: 0.8%;
+    border: 1px solid rgb(217 169 76 / 38%);
+    border-left: 3px solid rgb(217 169 76 / 78%);
+    background: rgb(3 14 21 / 91%);
+  }
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
+  body .combat-header {
+    grid-template-columns: 3.2rem minmax(0, 1fr) 3.6rem;
+  }
+
+  body .battlefield-board {
+    position: relative;
+    z-index: 7;
+    inset: auto;
+    width: 100%;
+    min-height: 30rem;
+    grid-template-columns: minmax(0, 1fr) minmax(6.6rem, 0.72fr) minmax(0, 1fr);
+    gap: 0.35rem;
+    padding: 0.65rem;
+  }
+
+  body .command-deck {
+    grid-template-columns: 1fr;
+  }
+
+  body .tactic-grid {
+    height: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+    gap: 0.42rem;
+  }
+
+  body .lock-column .lock-plan {
+    min-height: 4.3rem;
   }
 }

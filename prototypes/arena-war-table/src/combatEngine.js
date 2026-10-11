@@ -22,6 +22,30 @@ export const DOCTRINES = {
   },
 };
 
+export const TACTICS = {
+  intercept: {
+    id: "intercept",
+    name: "Intercept",
+    code: "I",
+    short: "Stop a focused strike",
+    description: "Best against Hunts. Reduce a focused attack by 14.",
+  },
+  scatter: {
+    id: "scatter",
+    name: "Scatter",
+    code: "S",
+    short: "Break the blast pattern",
+    description: "Best against Volleys. Reduce damage to every ally by 8.",
+  },
+  disrupt: {
+    id: "disrupt",
+    name: "Disrupt",
+    code: "D",
+    short: "Collapse enemy support",
+    description: "Best against Formations. Cancel support and add 12 damage.",
+  },
+};
+
 export const HERO_LIBRARY = {
   Lyra: {
     role: "Ranged",
@@ -262,6 +286,7 @@ export function createCombatState(heroNames, doctrine = "scout") {
   return {
     round: 1,
     energy: 3,
+    momentum: 0,
     doctrine: DOCTRINES[doctrine] ? doctrine : "scout",
     heroes: heroNames.map((name, slot) => ({
       id: `${name.toLowerCase()}-${slot}`,
@@ -279,6 +304,7 @@ export function createCombatState(heroNames, doctrine = "scout") {
     })),
     log: ["The rival line shifts. Read the stance before you commit."],
     debrief: null,
+    lastClash: null,
     outcome: null,
   };
 }
@@ -306,6 +332,8 @@ export function getEnemyIntent(state) {
       name: "Arcstorm",
       description: "15 damage to every living champion",
       area: true,
+      kind: "volley",
+      counterTactic: "scatter",
       damage: 15,
       targetIds: livingHeroes.map((hero) => hero.id),
       targetLabel: "All champions",
@@ -328,6 +356,8 @@ export function getEnemyIntent(state) {
       name: "Executioner's Mark",
       description: "34 damage to your weakest champion",
       area: false,
+      kind: "hunt",
+      counterTactic: "intercept",
       damage: 34,
       targetIds: [lowestHero.id],
       targetLabel: lowestHero.name,
@@ -349,6 +379,8 @@ export function getEnemyIntent(state) {
     name: "Crushing Advance",
     description: "26 damage to your healthiest champion",
     area: false,
+    kind: "formation",
+    counterTactic: "disrupt",
     damage: 26,
     targetIds: [highestHero.id],
     targetLabel: highestHero.name,
@@ -369,8 +401,6 @@ export function getEnemyForecast(state) {
   if (!intent) return null;
 
   const exact = state.doctrine === "scout" && state.round === 1;
-  const alternate =
-    intent.name === "Arcstorm" ? "Crushing Advance" : "Arcstorm";
   const signal = intent.area
     ? "Pressure is spreading across every lane"
     : `${intent.targetLabel} is drawing the rival's attention`;
@@ -379,11 +409,14 @@ export function getEnemyForecast(state) {
     actorName: intent.actorName,
     exact,
     confidence: exact ? 100 : state.doctrine === "fortify" ? 62 : 54,
-    headline: exact ? intent.name : `${intent.name} / ${alternate}`,
+    headline: intent.name,
     targetLabel: exact ? intent.targetLabel : signal,
     description: exact
       ? intent.description
-      : `Likely ${intent.name}; ${alternate} remains possible.`,
+      : `${intent.name} is locked. Its final target remains concealed.`,
+    kind: intent.kind,
+    counterTactic: intent.counterTactic,
+    counterLabel: TACTICS[intent.counterTactic].name,
     targetIds: intent.area
       ? state.heroes.filter(living).map((hero) => hero.id)
       : intent.targetIds,
@@ -405,6 +438,9 @@ export function validatePlan(state, plan) {
   if (!lead || !living(lead)) return "Choose a living lead.";
   if (!target || !living(target)) return "Choose a living rival.";
   if (!ability) return "Choose an ability.";
+  if (!TACTICS[plan.tacticId]) return "Choose a tactical response.";
+  if (plan.useSurge && state.momentum < 3)
+    return "Build 3 Crown Momentum before using a surge.";
   if (ability.cost > state.energy) return `You need ${ability.cost} energy.`;
   if (!abilityIsReady(lead, ability, state.round))
     return `${ability.name} is still recovering.`;
@@ -415,6 +451,49 @@ export function validatePlan(state, plan) {
     if (assist.assistReadyRound > state.round)
       return `${assist.name}'s assist is still recovering.`;
   }
+  return null;
+}
+
+function getCombo(lead, ability, assist, tacticId) {
+  if (!assist) return null;
+  const assistName = HERO_LIBRARY[assist.name].assist.name;
+
+  if (assistName === "Hunter's Eye" && !ability.area)
+    return {
+      name: "Marked Volley",
+      description: "The marked strike gains 6 damage.",
+      bonusDamage: 6,
+    };
+  if (
+    ["Stand Guard", "Iron Cover", "Aegis"].includes(assistName) &&
+    tacticId === "intercept"
+  )
+    return {
+      name: "Shieldwall",
+      description: "The intercept denies 5 more damage.",
+      incomingReduction: 5,
+    };
+  if (assistName === "Smoke Veil" && tacticId === "disrupt")
+    return {
+      name: "Vanishing Point",
+      description: "The disrupted line takes 6 more damage.",
+      bonusDamage: 6,
+    };
+  if (assistName === "Mend" && tacticId === "scatter")
+    return {
+      name: "Second Wind",
+      description: "Every living champion recovers 4 HP.",
+      healAll: 4,
+    };
+  if (
+    assistName === "Expose" &&
+    ((ability.pierce ?? 0) > 0 || (ability.expose ?? 0) > 0)
+  )
+    return {
+      name: "Open Crown",
+      description: "Exploit the opening for 8 more damage.",
+      bonusDamage: 8,
+    };
   return null;
 }
 
@@ -447,12 +526,37 @@ export function resolveRound(state, plan) {
     plan.assistId === "brace"
       ? null
       : state.heroes.find((hero) => hero.id === plan.assistId);
+  const tactic = TACTICS[plan.tacticId];
+  const tacticMatched = tactic.id === intent?.counterTactic;
+  const combo = getCombo(lead, ability, assist, tactic.id);
+  const surgeUsed = Boolean(plan.useSurge && state.momentum >= 3);
   const log = [];
   let heroes = state.heroes.map((hero) => ({ ...hero, shield: 0 }));
   let enemies = state.enemies.map((enemy) => ({ ...enemy, shield: 0 }));
   let incomingReduction = ability.weaken ?? 0;
   let bonusDamage = ability.expose ?? 0;
+  let supportDisrupted = false;
   const doctrine = DOCTRINES[state.doctrine] ?? DOCTRINES.scout;
+
+  if (tactic.id === "intercept")
+    incomingReduction += tacticMatched ? 14 : 3;
+  if (tactic.id === "scatter")
+    incomingReduction += tacticMatched ? 8 : 1;
+  if (tactic.id === "disrupt") {
+    bonusDamage += tacticMatched ? 12 : 3;
+    supportDisrupted = tacticMatched;
+  }
+  if (combo?.bonusDamage) bonusDamage += combo.bonusDamage;
+  if (combo?.incomingReduction)
+    incomingReduction += combo.incomingReduction;
+  if (surgeUsed) bonusDamage += 12;
+  log.push(
+    tacticMatched
+      ? `${tactic.name} hard-counters ${intent.name}.`
+      : `${tactic.name} offers only a partial answer to ${intent.name}.`,
+  );
+  if (combo) log.push(`${combo.name}: ${combo.description}`);
+  if (surgeUsed) log.push("Crown Surge adds 12 damage to the lead action.");
 
   if (state.round === 1 && doctrine.id === "fortify") {
     incomingReduction += 8;
@@ -463,7 +567,9 @@ export function resolveRound(state, plan) {
     log.push("Ambush adds 8 damage to the opening strike.");
   }
 
-  if (intent?.support?.type === "shield") {
+  if (supportDisrupted && intent?.support) {
+    log.push(`${tactic.name} cancels ${intent.support.source}'s support.`);
+  } else if (intent?.support?.type === "shield") {
     enemies = enemies.map((enemy) =>
       enemy.id === intent.support.targetId
         ? { ...enemy, shield: intent.support.amount }
@@ -473,7 +579,7 @@ export function resolveRound(state, plan) {
       `${intent.support.source} grants ${intent.support.amount} Aegis to ${intent.actorName}.`,
     );
   }
-  if (intent?.support?.type === "heal") {
+  if (!supportDisrupted && intent?.support?.type === "heal") {
     enemies = enemies.map((enemy) =>
       enemy.id === intent.support.targetId
         ? {
@@ -523,6 +629,14 @@ export function resolveRound(state, plan) {
     }
   }
 
+  if (combo?.healAll) {
+    heroes = heroes.map((hero) =>
+      living(hero)
+        ? { ...hero, hp: Math.min(hero.maxHp, hero.hp + combo.healAll) }
+        : hero,
+    );
+  }
+
   if (ability.selfShield) {
     heroes = heroes.map((hero) =>
       hero.id === lead.id
@@ -548,7 +662,7 @@ export function resolveRound(state, plan) {
     const openingDoctrineBonus =
       state.round === 1 && doctrine.id === "ambush" ? 8 : 0;
     const raw = ability.area
-      ? ability.damage + openingDoctrineBonus
+      ? ability.damage + openingDoctrineBonus + bonusDamage
       : primaryDamage;
     const result = applyShieldedDamage(enemy, raw, ability.pierce ?? 0);
     playerLosses.push({
@@ -603,7 +717,17 @@ export function resolveRound(state, plan) {
           grade: "Decisive read",
           summary: `${damageDealt} dealt · ${damageTaken} taken · ${defeatedRivals} rival removed.`,
         }
-      : damagePrevented >= 8
+      : tacticMatched && combo
+        ? {
+            grade: `${combo.name} chain`,
+            summary: `Hard counter · ${damageDealt} dealt · ${damagePrevented} denied · +2 momentum.`,
+          }
+        : tacticMatched
+          ? {
+              grade: "Hard counter",
+              summary: `${tactic.name} answered ${intent.name}: ${damagePrevented} denied while dealing ${damageDealt}.`,
+            }
+          : damagePrevented >= 8
         ? {
             grade: "Counter-read held",
             summary: `${damagePrevented} damage denied while dealing ${damageDealt}.`,
@@ -650,15 +774,51 @@ export function resolveRound(state, plan) {
   const energy = outcome
     ? state.energy - ability.cost
     : Math.min(MAX_ENERGY, state.energy - ability.cost + ROUND_RECOVERY);
+  const momentumGain = (tacticMatched ? 1 : 0) + (combo ? 1 : 0);
+  const momentum = surgeUsed
+    ? Math.min(3, momentumGain)
+    : Math.min(3, state.momentum + momentumGain);
 
   return {
     ...state,
     round: outcome ? state.round : nextRound,
     energy,
+    momentum,
     heroes,
     enemies,
     log: [...log, ...state.log].slice(0, 8),
     debrief,
+    lastClash: {
+      tacticId: tactic.id,
+      tacticName: tactic.name,
+      tacticMatched,
+      combo,
+      surgeUsed,
+      damageDealt,
+      damageTaken,
+      damagePrevented,
+      playerLosses,
+      enemyLosses,
+      intentName: intent?.name ?? "No enemy action",
+    },
     outcome,
+  };
+}
+
+export function previewRound(state, plan) {
+  const error = validatePlan(state, plan);
+  if (error) return { error };
+  const next = resolveRound(state, plan);
+  const clash = next.lastClash;
+  return {
+    error: null,
+    grade: clash.tacticMatched ? "Hard counter" : "Partial answer",
+    outgoing: clash.damageDealt,
+    incoming: clash.damageTaken,
+    prevented: clash.damagePrevented,
+    combo: clash.combo,
+    surgeUsed: clash.surgeUsed,
+    momentumGain:
+      (clash.tacticMatched ? 1 : 0) + (clash.combo ? 1 : 0),
   };
 }

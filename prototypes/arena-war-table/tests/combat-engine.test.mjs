@@ -3,10 +3,12 @@ import test from "node:test";
 
 import {
   HERO_LIBRARY,
+  TACTICS,
   abilityIsReady,
   createCombatState,
   getEnemyForecast,
   getEnemyIntent,
+  previewRound,
   resolveRound,
   validatePlan,
 } from "../src/combatEngine.js";
@@ -32,10 +34,12 @@ function safePlan(state) {
     abilityId: ability.id,
     assistId: assist?.id ?? "brace",
     targetId: target.id,
+    tacticId: getEnemyIntent(state).counterTactic,
+    useSurge: false,
   };
 }
 
-test("Scout reveals the opening read, then forecasts become uncertain", () => {
+test("Scout reveals the opening target, then conceals targets without hiding actions", () => {
   const state = createCombatState(["Lyra", "Torin", "Vex"]);
   const intent = getEnemyIntent(state);
   const openingForecast = getEnemyForecast(state);
@@ -49,7 +53,8 @@ test("Scout reveals the opening read, then forecasts become uncertain", () => {
   const next = resolveRound(state, safePlan(state));
   const nextForecast = getEnemyForecast(next);
   assert.equal(nextForecast.exact, false);
-  assert.match(nextForecast.headline, /\//);
+  assert.equal(nextForecast.headline, "Arcstorm");
+  assert.match(nextForecast.description, /final target remains concealed/i);
 });
 
 test("opening doctrines create distinct defensive and offensive trades", () => {
@@ -63,7 +68,7 @@ test("opening doctrines create distinct defensive and offensive trades", () => {
 
   assert.ok(fortify.heroes[0].hp > scout.heroes[0].hp);
   assert.ok(ambush.enemies[0].hp < scout.enemies[0].hp);
-  assert.equal(fortify.debrief.grade, "Counter-read held");
+  assert.equal(fortify.debrief.grade, "Hard counter");
 });
 
 test("a planned clash spends energy, applies support, and starts cooldowns", () => {
@@ -73,6 +78,8 @@ test("a planned clash spends energy, applies support, and starts cooldowns", () 
     abilityId: "arrow-storm",
     assistId: "vex-2",
     targetId: "branna-rival",
+    tacticId: "disrupt",
+    useSurge: false,
   };
 
   assert.equal(validatePlan(state, plan), null);
@@ -80,11 +87,11 @@ test("a planned clash spends energy, applies support, and starts cooldowns", () 
 
   assert.equal(next.round, 2);
   assert.equal(next.energy, 2);
-  assert.deepEqual(
-    next.enemies.map((enemy) => enemy.hp),
-    [86, 90, 70],
-  );
+  assert.deepEqual(next.enemies.map((enemy) => enemy.hp), [56, 72, 52]);
   assert.equal(next.heroes[0].hp, 81);
+  assert.equal(next.lastClash.tacticMatched, true);
+  assert.equal(next.lastClash.combo.name, "Vanishing Point");
+  assert.equal(next.momentum, 2);
   assert.equal(
     abilityIsReady(next.heroes[0], HERO_LIBRARY.Lyra.abilities[2], 2),
     false,
@@ -94,6 +101,23 @@ test("a planned clash spends energy, applies support, and starts cooldowns", () 
     true,
   );
   assert.equal(next.heroes[2].assistReadyRound, 3);
+});
+
+test("each enemy intent exposes a distinct tactical counter and preview", () => {
+  let state = createCombatState(["Lyra", "Torin", "Vex"]);
+
+  for (const expected of ["disrupt", "scatter", "intercept"]) {
+    const intent = getEnemyIntent(state);
+    assert.equal(intent.counterTactic, expected);
+    assert.ok(TACTICS[expected]);
+
+    const plan = safePlan(state);
+    const preview = previewRound(state, plan);
+    assert.equal(preview.error, null);
+    assert.equal(preview.grade, "Hard counter");
+    assert.ok(preview.prevented > 0 || expected === "disrupt");
+    state = resolveRound(state, plan);
+  }
 });
 
 test("legal fallback play always reaches a result without deadlocking", () => {
