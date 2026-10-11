@@ -479,6 +479,16 @@ export function createCombatState(heroSelections, doctrine = "scout") {
       cooldowns: {},
       charges: { decree: 1 },
     },
+    enemyGeneral: {
+      id: "malrec",
+      name: "Malrec Drake",
+      title: "The Ash Regent",
+      hp: 320,
+      maxHp: 320,
+      threat: 88,
+      guard: 82,
+      will: 91,
+    },
     items: { tonic: 1, smoke: 1, spark: 1 },
     supportWeaponReady: true,
     stats: {
@@ -655,6 +665,13 @@ export function validatePlan(state, plan) {
     return "That battle item has already been used.";
   if (plan.useSupportWeapon && !state.supportWeaponReady)
     return `${SUPPORT_WEAPON.name} has already fired.`;
+  if (
+    plan.targetGeneral &&
+    plan.generalAbilityId !== "decree" &&
+    !plan.useSupportWeapon &&
+    !ability.area
+  )
+    return "Choose a breaching attack before targeting the enemy General.";
   return null;
 }
 
@@ -944,6 +961,21 @@ export function resolveRound(state, plan) {
     );
   }
 
+  const generalDamage = plan.targetGeneral
+    ? (generalAbility?.id === "decree" ? 28 : 0) +
+      (plan.useSupportWeapon ? 18 : 0) +
+      (ability.area ? 8 : 0)
+    : 0;
+  const enemyGeneral = {
+    ...state.enemyGeneral,
+    hp: Math.max(0, state.enemyGeneral.hp - generalDamage),
+  };
+  if (generalDamage > 0) {
+    log.push(
+      `${state.enemyGeneral.name}'s command guard breaks for ${generalDamage} damage.`,
+    );
+  }
+
   const enemyLosses = [];
   const incomingDamage = Math.max(0, (intent?.damage ?? 0) - incomingReduction);
   heroes = heroes.map((hero) => {
@@ -964,7 +996,7 @@ export function resolveRound(state, plan) {
   const damageDealt = [...playerLosses, ...supportLosses].reduce(
     (total, loss) => total + loss.hpLoss,
     0,
-  );
+  ) + generalDamage;
   const damageTaken = enemyLosses.reduce(
     (total, loss) => total + loss.hpLoss,
     0,
@@ -1030,7 +1062,7 @@ export function resolveRound(state, plan) {
   enemies = enemies.map((enemy) => ({ ...enemy, shield: 0 }));
 
   const alliesAlive = heroes.some(living);
-  const enemiesAlive = enemies.some(living);
+  const enemiesAlive = enemies.some(living) && enemyGeneral.hp > 0;
   const outcome =
     !alliesAlive && !enemiesAlive
       ? "draw"
@@ -1110,11 +1142,13 @@ export function resolveRound(state, plan) {
       damagePrevented,
       playerLosses: [...playerLosses, ...supportLosses],
       enemyLosses,
+      generalDamage,
       intentName: intent?.name ?? "No enemy action",
       controlSource: plan.controlSource ?? "manual",
     },
     stats,
     general,
+    enemyGeneral,
     items,
     supportWeaponReady: plan.useSupportWeapon
       ? false
@@ -1132,6 +1166,7 @@ export function previewRound(state, plan) {
     error: null,
     grade: clash.tacticMatched ? "Hard counter" : "Partial answer",
     outgoing: clash.damageDealt,
+    generalDamage: clash.generalDamage,
     incoming: clash.damageTaken,
     prevented: clash.damagePrevented,
     combo: clash.combo,

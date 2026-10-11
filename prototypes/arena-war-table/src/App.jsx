@@ -20,6 +20,7 @@ import {
   resolveRound,
   validatePlan,
 } from "./combatEngine.js";
+import { CinematicBattlefield } from "./CinematicBattlefield.jsx";
 
 const CONTROL_MODES = {
   auto: {
@@ -174,6 +175,7 @@ function buildDefaultPlan(state) {
     generalAbilityId: "",
     itemId: "",
     useSupportWeapon: false,
+    targetGeneral: false,
   };
 }
 
@@ -211,6 +213,16 @@ export function App() {
   const [resolutionPaused, setResolutionPaused] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [lastObjective, setLastObjective] = useState(null);
+  const [viewMode, setViewMode] = useState("plan");
+  const startsWithCompactGenerals = () =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 760px), (max-aspect-ratio: 1 / 1)").matches;
+  const [allyGeneralOpen, setAllyGeneralOpen] = useState(
+    () => !startsWithCompactGenerals(),
+  );
+  const [enemyGeneralOpen, setEnemyGeneralOpen] = useState(
+    () => !startsWithCompactGenerals(),
+  );
 
   const available = useMemo(() => {
     const selectedNames = new Set(heroes.map((hero) => hero.name));
@@ -368,6 +380,7 @@ export function App() {
     setPendingResolution(null);
     setResolutionPaused(false);
     setLastObjective(null);
+    setViewMode("plan");
     setAiInsight(
       controlMode === "command"
         ? "Full authority is yours. Read the signal and build the answer."
@@ -375,6 +388,7 @@ export function App() {
     );
     if (controlMode === "auto") {
       setPhase("resolving");
+      setViewMode("clash");
       setToast("The commander is resolving the battle");
       window.setTimeout(() => finishAutoResolve(initial), 760);
     } else {
@@ -417,12 +431,14 @@ export function App() {
       }
 
       setPhase("resolving");
+      setViewMode("clash");
       const proposedPreview = previewRound(combat, proposedPlan);
       setLastImpact({
         targetId: proposedPlan.targetId,
         actorId: proposedPlan.leadId,
         tacticId: proposedPlan.tacticId,
         outgoing: proposedPreview?.outgoing ?? 0,
+        generalDamage: proposedPreview?.generalDamage ?? 0,
         incoming: proposedPreview?.incoming ?? 0,
       });
       setResolutionStep(0);
@@ -486,6 +502,7 @@ export function App() {
     );
     setCommandStep(0);
     setPhase("debrief");
+    setViewMode("plan");
     setToast(`${next.debrief.grade} — review the exchange`);
   }, [commandStyle, controlMode, pendingResolution]);
 
@@ -512,6 +529,12 @@ export function App() {
     resolutionPaused,
     resolutionStep,
   ]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(""), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     if (phase !== "debrief" || controlMode !== "watch") return undefined;
@@ -590,11 +613,13 @@ export function App() {
     setPendingResolution(null);
     setResolutionPaused(false);
     setLastObjective(null);
+    setViewMode("plan");
     setToast("Adjust your three or opening doctrine");
   }
 
   function continueAfterDebrief() {
     setPhase("battle");
+    setViewMode("plan");
     setResolutionStep(0);
     setToast(`Round ${combat.round} — new rival signals detected`);
   }
@@ -818,6 +843,7 @@ export function App() {
               </div>
             </header>
 
+            {false && (
             <section
               className={`battlefield-board movement-${plan.movementId} ${phase === "resolving" ? `is-clashing resolution-beat-${resolutionStep}` : ""} ${resolutionPaused ? "is-paused" : ""}`}
               aria-label="Arena battlefield"
@@ -1060,6 +1086,30 @@ export function App() {
                 ))}
               </div>
             </section>
+            )}
+
+            <CinematicBattlefield
+              combat={combat}
+              plan={plan}
+              setPlan={setPlan}
+              phase={phase}
+              forecast={forecast}
+              lead={lead}
+              selectedAbility={selectedAbility}
+              lastImpact={lastImpact}
+              resolutionStep={resolutionStep}
+              resolutionPaused={resolutionPaused}
+              ordersLocked={ordersLocked}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              allyGeneralOpen={allyGeneralOpen}
+              setAllyGeneralOpen={setAllyGeneralOpen}
+              enemyGeneralOpen={enemyGeneralOpen}
+              setEnemyGeneralOpen={setEnemyGeneralOpen}
+              powerDrawerOpen={powerDrawerOpen}
+              setPowerDrawerOpen={setPowerDrawerOpen}
+              selectLead={selectLead}
+            />
 
             <section
               className={`command-deck ${phase === "resolving" ? "is-resolving" : ""}`}

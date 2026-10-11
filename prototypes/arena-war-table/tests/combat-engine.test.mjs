@@ -45,6 +45,7 @@ function safePlan(state) {
     generalAbilityId: "",
     itemId: "",
     useSupportWeapon: false,
+    targetGeneral: false,
   };
 }
 
@@ -203,6 +204,28 @@ test("General powers, items, and the support weapon are limited resources", () =
     validatePlan(next, { ...safePlan(next), useSupportWeapon: true }),
     /already fired/i,
   );
+});
+
+test("only breaching attacks can damage the enemy General", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"]);
+  const ordinaryPlan = {
+    ...safePlan(state),
+    abilityId: "quickshot",
+    targetGeneral: true,
+  };
+  assert.match(validatePlan(state, ordinaryPlan), /breaching attack/i);
+
+  const breachPlan = {
+    ...safePlan(state),
+    abilityId: "arrow-storm",
+    targetGeneral: true,
+  };
+  const preview = previewRound(state, breachPlan);
+  const next = resolveRound(state, breachPlan);
+
+  assert.ok(preview.generalDamage > 0);
+  assert.equal(next.enemyGeneral.hp, state.enemyGeneral.hp - preview.generalDamage);
+  assert.equal(next.lastClash.generalDamage, preview.generalDamage);
 });
 
 test("legal fallback play always reaches a result without deadlocking", () => {

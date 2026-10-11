@@ -19,6 +19,8 @@ Before making substantial visual changes, use the Product Design plugin's `get-c
 - Every deployed hero commands a selectable army. Army and movement pairings must create visible, forecastable mechanical synergies rather than cosmetic labels.
 - Keep the battle UI strategically rich but visually calm: use progressive disclosure, show one command decision at a time, preserve a compact summary of the full plan, and keep advanced General tools collapsed until requested.
 - Keep the allied and rival hero lines visually adjacent. Do not place planning cards or redundant General recommendations between them; put the compact round objective in the top status bar and keep formation choices in the command flow.
+- Use a three-camera combat language: Plan is the default decision view, Clash becomes the cinematic execution view, and Tactical is an optional battlefield inspection view. Allow manual switching at any time it is safe.
+- Treat both Generals as battlefield actors. Each should collapse to a portrait rail or expand to a readable command sheet; the enemy General has health and can be damaged by clearly signposted General-targeting attacks.
 
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 
