@@ -4,6 +4,16 @@ Run the local server yourself and open the preview in the browser available to t
 
 Before making substantial visual changes, use the Product Design plugin's `get-context` skill when the visual source is unclear or no longer matches the current goal. When the user gives durable prototype-specific design feedback, preferences, or decisions, record them in `AGENTS.md`.
 
+## Approved gameplay direction
+
+- Preserve the established Crown Arena mock and Wildcrown art direction as the visual source of truth.
+- Make the core rhythm readable: reveal the rival plan, choose a counter, then resolve support, strike, and retaliation as distinct beats.
+- Formation orders must create real mechanical counters rather than decorative labels.
+- Deliberate planning is the default; the countdown is an optional pressure mode.
+- Victories should create a lightweight run-building choice before the next tier.
+- Keep the prototype playable in portrait instead of replacing it with a rotate-only gate.
+- Favor forecastable tactical depth over hidden automation: show the next threat, rotate optional combat objectives, and reward players for changing their answer without obscuring the core clash.
+
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 
 Build app UI in `src/`. Keep `.openai/hosting.json`, `worker/index.js`, `scripts/prepare-sites-build.mjs`, and `tests/sites-worker.test.mjs` intact so the same local prototype can be handed to Sites. Before a Sites handoff, run `npm run build` and `npm run test:sites`; the build must leave `dist/client/index.html`, `dist/server/index.js`, and `dist/.openai/hosting.json`.

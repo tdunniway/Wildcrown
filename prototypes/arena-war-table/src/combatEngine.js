@@ -1,20 +1,24 @@
 export const MAX_ENERGY = 5;
 export const ROUND_RECOVERY = 2;
-export const MAX_MOMENTUM = 3;
 
-export const DOCTRINE_LIBRARY = {
-  Flank: {
-    short: "Intercept support",
-    description:
-      "Strike the rival supporter for +8 damage and cancel their aid.",
+export const DOCTRINES = {
+  scout: {
+    id: "scout",
+    name: "Scout",
+    short: "Exact opening read",
+    description: "Reveal the rival's exact first action and target.",
   },
-  Press: {
-    short: "Punish the actor",
-    description: "Strike the acting rival for +6 damage.",
+  fortify: {
+    id: "fortify",
+    name: "Fortify",
+    short: "Soften the opening blow",
+    description: "Reduce the rival's first attack by 8 damage.",
   },
-  Hold: {
-    short: "Guard the threat",
-    description: "Lead while targeted to gain 10 shield.",
+  ambush: {
+    id: "ambush",
+    name: "Ambush",
+    short: "Punish the opening",
+    description: "Add 8 damage to your first lead action.",
   },
 };
 
@@ -254,16 +258,11 @@ export const ENEMY_LIBRARY = [
   { id: "elara", name: "Elara", role: "Invoker", maxHp: 88 },
 ];
 
-export function createCombatState(heroNames, options = {}) {
-  const tier = options.tier ?? 1;
-  const orders = options.orders ?? ["Flank", "Press", "Hold"];
-  const enemyBonus = Math.max(0, tier - 1) * 14;
+export function createCombatState(heroNames, doctrine = "scout") {
   return {
     round: 1,
     energy: 3,
-    momentum: 0,
-    tier,
-    intentDamageBonus: Math.max(0, tier - 1) * 3,
+    doctrine: DOCTRINES[doctrine] ? doctrine : "scout",
     heroes: heroNames.map((name, slot) => ({
       id: `${name.toLowerCase()}-${slot}`,
       name,
@@ -272,22 +271,14 @@ export function createCombatState(heroNames, options = {}) {
       maxHp: 100,
       cooldowns: {},
       assistReadyRound: 1,
-      order: orders[slot] ?? orders[slot % orders.length] ?? "Press",
     })),
     enemies: ENEMY_LIBRARY.map((enemy) => ({
       ...enemy,
-      maxHp: enemy.maxHp + enemyBonus,
-      hp: enemy.maxHp + enemyBonus,
+      hp: enemy.maxHp,
       shield: 0,
     })),
-    log: [`Tier ${tier}: the rival reveals its opening intent.`],
-    stats: {
-      roundsResolved: 0,
-      damageDealt: 0,
-      damageTaken: 0,
-      doctrineTriggers: 0,
-      crownBreaks: 0,
-    },
+    log: ["The rival line shifts. Read the stance before you commit."],
+    debrief: null,
     outcome: null,
   };
 }
@@ -307,23 +298,21 @@ export function getEnemyIntent(state) {
   const highestHero = [...livingHeroes].sort(
     (a, b) => b.hp - a.hp || a.id.localeCompare(b.id),
   )[0];
-  const damageBonus = state.intentDamageBonus ?? 0;
 
   if (state.round % 3 === 2) {
     return {
       actorId: actor.id,
       actorName: actor.name,
       name: "Arcstorm",
-      description: `${15 + damageBonus} damage to every living champion`,
+      description: "15 damage to every living champion",
       area: true,
-      damage: 15 + damageBonus,
+      damage: 15,
       targetIds: livingHeroes.map((hero) => hero.id),
       targetLabel: "All champions",
       support: support
         ? {
             type: "heal",
             source: support.name,
-            sourceId: support.id,
             targetId: actor.id,
             amount: 12,
             label: `Reknit ${actor.name} for 12`,
@@ -337,16 +326,15 @@ export function getEnemyIntent(state) {
       actorId: actor.id,
       actorName: actor.name,
       name: "Executioner's Mark",
-      description: `${34 + damageBonus} damage to your weakest champion`,
+      description: "34 damage to your weakest champion",
       area: false,
-      damage: 34 + damageBonus,
+      damage: 34,
       targetIds: [lowestHero.id],
       targetLabel: lowestHero.name,
       support: support
         ? {
             type: "shield",
             source: support.name,
-            sourceId: support.id,
             targetId: actor.id,
             amount: 14,
             label: `Aegis ${actor.name} for 14`,
@@ -359,21 +347,46 @@ export function getEnemyIntent(state) {
     actorId: actor.id,
     actorName: actor.name,
     name: "Crushing Advance",
-    description: `${26 + damageBonus} damage to your healthiest champion`,
+    description: "26 damage to your healthiest champion",
     area: false,
-    damage: 26 + damageBonus,
+    damage: 26,
     targetIds: [highestHero.id],
     targetLabel: highestHero.name,
     support: support
       ? {
           type: "shield",
           source: support.name,
-          sourceId: support.id,
           targetId: actor.id,
           amount: 12,
           label: `Aegis ${actor.name} for 12`,
         }
       : null,
+  };
+}
+
+export function getEnemyForecast(state) {
+  const intent = getEnemyIntent(state);
+  if (!intent) return null;
+
+  const exact = state.doctrine === "scout" && state.round === 1;
+  const alternate =
+    intent.name === "Arcstorm" ? "Crushing Advance" : "Arcstorm";
+  const signal = intent.area
+    ? "Pressure is spreading across every lane"
+    : `${intent.targetLabel} is drawing the rival's attention`;
+
+  return {
+    actorName: intent.actorName,
+    exact,
+    confidence: exact ? 100 : state.doctrine === "fortify" ? 62 : 54,
+    headline: exact ? intent.name : `${intent.name} / ${alternate}`,
+    targetLabel: exact ? intent.targetLabel : signal,
+    description: exact
+      ? intent.description
+      : `Likely ${intent.name}; ${alternate} remains possible.`,
+    targetIds: intent.area
+      ? state.heroes.filter(living).map((hero) => hero.id)
+      : intent.targetIds,
   };
 }
 
@@ -395,8 +408,6 @@ export function validatePlan(state, plan) {
   if (ability.cost > state.energy) return `You need ${ability.cost} energy.`;
   if (!abilityIsReady(lead, ability, state.round))
     return `${ability.name} is still recovering.`;
-  if (plan.crownBreak && state.momentum < MAX_MOMENTUM)
-    return "Crown Break needs 3 momentum.";
   if (plan.assistId !== "brace") {
     const assist = state.heroes.find((hero) => hero.id === plan.assistId);
     if (!assist || !living(assist) || assist.id === lead.id)
@@ -441,47 +452,18 @@ export function resolveRound(state, plan) {
   let enemies = state.enemies.map((enemy) => ({ ...enemy, shield: 0 }));
   let incomingReduction = ability.weaken ?? 0;
   let bonusDamage = ability.expose ?? 0;
-  let doctrineTrigger = null;
-  let enemySupportCancelled = false;
+  const doctrine = DOCTRINES[state.doctrine] ?? DOCTRINES.scout;
 
-  if (
-    !ability.area &&
-    lead.order === "Flank" &&
-    intent?.support?.sourceId === target.id
-  ) {
+  if (state.round === 1 && doctrine.id === "fortify") {
+    incomingReduction += 8;
+    log.push("Fortify absorbs 8 damage from the opening attack.");
+  }
+  if (state.round === 1 && doctrine.id === "ambush") {
     bonusDamage += 8;
-    doctrineTrigger = "Flank intercept";
-    enemySupportCancelled = true;
-    log.push(
-      `${lead.name} flanks ${target.name}: +8 damage and support denied.`,
-    );
-  } else if (
-    !ability.area &&
-    lead.order === "Press" &&
-    intent?.actorId === target.id
-  ) {
-    bonusDamage += 6;
-    doctrineTrigger = "Press punish";
-    log.push(`${lead.name} presses the acting rival for +6 damage.`);
-  } else if (lead.order === "Hold" && intent?.targetIds.includes(lead.id)) {
-    heroes = heroes.map((hero) =>
-      hero.id === lead.id ? { ...hero, shield: 10 } : hero,
-    );
-    doctrineTrigger = "Hold guard";
-    log.push(`${lead.name} holds against the revealed threat for 10 shield.`);
+    log.push("Ambush adds 8 damage to the opening strike.");
   }
 
-  if (plan.crownBreak) {
-    bonusDamage += 18;
-    enemySupportCancelled = true;
-    log.push(`${lead.name} unleashes Crown Break for +18 damage.`);
-  }
-
-  if (intent?.support && enemySupportCancelled) {
-    log.push(
-      `${intent.support.source}'s support is interrupted (${intent.support.label}).`,
-    );
-  } else if (intent?.support?.type === "shield") {
+  if (intent?.support?.type === "shield") {
     enemies = enemies.map((enemy) =>
       enemy.id === intent.support.targetId
         ? { ...enemy, shield: intent.support.amount }
@@ -491,7 +473,7 @@ export function resolveRound(state, plan) {
       `${intent.support.source} grants ${intent.support.amount} Aegis to ${intent.actorName}.`,
     );
   }
-  if (!enemySupportCancelled && intent?.support?.type === "heal") {
+  if (intent?.support?.type === "heal") {
     enemies = enemies.map((enemy) =>
       enemy.id === intent.support.targetId
         ? {
@@ -563,7 +545,11 @@ export function resolveRound(state, plan) {
   const playerLosses = [];
   enemies = enemies.map((enemy) => {
     if (!damageTargets.includes(enemy.id)) return enemy;
-    const raw = ability.area ? ability.damage : primaryDamage;
+    const openingDoctrineBonus =
+      state.round === 1 && doctrine.id === "ambush" ? 8 : 0;
+    const raw = ability.area
+      ? ability.damage + openingDoctrineBonus
+      : primaryDamage;
     const result = applyShieldedDamage(enemy, raw, ability.pierce ?? 0);
     playerLosses.push({
       name: enemy.name,
@@ -592,6 +578,48 @@ export function resolveRound(state, plan) {
     log.push(
       `${intent.actorName} uses ${intent.name}: ${enemyLosses.map((loss) => `${loss.hpLoss} to ${loss.name}`).join(", ")}.`,
     );
+
+  const damageDealt = playerLosses.reduce(
+    (total, loss) => total + loss.hpLoss,
+    0,
+  );
+  const damageTaken = enemyLosses.reduce(
+    (total, loss) => total + loss.hpLoss,
+    0,
+  );
+  const damagePrevented =
+    enemyLosses.reduce((total, loss) => total + loss.absorbed, 0) +
+    (intent
+      ? Math.min(intent.damage, incomingReduction) * intent.targetIds.length
+      : 0);
+  const defeatedRivals = enemies.filter(
+    (enemy) =>
+      enemy.hp <= 0 &&
+      state.enemies.find((entry) => entry.id === enemy.id)?.hp > 0,
+  ).length;
+  const debrief =
+    defeatedRivals > 0
+      ? {
+          grade: "Decisive read",
+          summary: `${damageDealt} dealt · ${damageTaken} taken · ${defeatedRivals} rival removed.`,
+        }
+      : damagePrevented >= 8
+        ? {
+            grade: "Counter-read held",
+            summary: `${damagePrevented} damage denied while dealing ${damageDealt}.`,
+          }
+        : damageDealt >= damageTaken + 8
+          ? {
+              grade: "Favorable trade",
+              summary: `${damageDealt} dealt for ${damageTaken} taken. Pressure is yours.`,
+            }
+          : {
+              grade:
+                damageTaken > damageDealt
+                  ? "Rival found a gap"
+                  : "Even exchange",
+              summary: `${damageDealt} dealt for ${damageTaken} taken. Change the read or the support.`,
+            };
 
   const nextRound = state.round + 1;
   heroes = heroes.map((hero) => ({
@@ -622,82 +650,15 @@ export function resolveRound(state, plan) {
   const energy = outcome
     ? state.energy - ability.cost
     : Math.min(MAX_ENERGY, state.energy - ability.cost + ROUND_RECOVERY);
-  const damageDealt = playerLosses.reduce(
-    (total, loss) => total + loss.hpLoss,
-    0,
-  );
-  const damageTaken = enemyLosses.reduce(
-    (total, loss) => total + loss.hpLoss,
-    0,
-  );
-  const momentum = Math.min(
-    MAX_MOMENTUM,
-    Math.max(
-      0,
-      (state.momentum ?? 0) -
-        (plan.crownBreak ? MAX_MOMENTUM : 0) +
-        (doctrineTrigger ? 1 : 0),
-    ),
-  );
-  const stats = state.stats ?? {
-    roundsResolved: 0,
-    damageDealt: 0,
-    damageTaken: 0,
-    doctrineTriggers: 0,
-    crownBreaks: 0,
-  };
 
   return {
     ...state,
     round: outcome ? state.round : nextRound,
     energy,
-    momentum,
     heroes,
     enemies,
     log: [...log, ...state.log].slice(0, 8),
-    stats: {
-      roundsResolved: stats.roundsResolved + 1,
-      damageDealt: stats.damageDealt + damageDealt,
-      damageTaken: stats.damageTaken + damageTaken,
-      doctrineTriggers: stats.doctrineTriggers + (doctrineTrigger ? 1 : 0),
-      crownBreaks: stats.crownBreaks + (plan.crownBreak ? 1 : 0),
-    },
-    lastClash: {
-      damageDealt,
-      damageTaken,
-      doctrineTrigger,
-      crownBreak: Boolean(plan.crownBreak),
-      enemySupportCancelled,
-    },
+    debrief,
     outcome,
   };
-}
-
-export function getPlanForecast(state, plan) {
-  const error = validatePlan(state, plan);
-  if (error) return { error };
-  const next = resolveRound(state, plan);
-  return {
-    ...next.lastClash,
-    energyAfter: next.energy,
-    momentumAfter: next.momentum,
-  };
-}
-
-export function scoreCombat(state) {
-  const remainingHealth = state.heroes.reduce(
-    (total, hero) => total + hero.hp,
-    0,
-  );
-  const score = Math.max(
-    0,
-    (state.outcome === "victory" ? 900 : 300) +
-      state.tier * 150 +
-      remainingHealth * 2 +
-      state.stats.doctrineTriggers * 80 +
-      state.stats.crownBreaks * 120 -
-      state.stats.roundsResolved * 45,
-  );
-  const rank = score >= 1400 ? "Sovereign" : score >= 1100 ? "Crown" : "Steel";
-  return { score, rank };
 }

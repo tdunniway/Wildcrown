@@ -1,0 +1,6 @@
+# Local reverse-engineering artifacts are not part of the web deployment.
+APK/
+audits/
+
+# Visual QA captures are retained locally and in git, but are not runtime assets.
+prototypes/**/qa/

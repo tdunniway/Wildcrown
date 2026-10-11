@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { clamp } from "@wildcrown/prototype-kit";
 import {
-  DOCTRINE_LIBRARY,
+  DOCTRINES,
   HERO_LIBRARY,
-  MAX_MOMENTUM,
   abilityIsReady,
   createCombatState,
-  getEnemyIntent,
-  getPlanForecast,
+  getEnemyForecast,
   resolveRound,
-  scoreCombat,
   validatePlan,
 } from "./combatEngine.js";
 
@@ -25,8 +21,6 @@ const reserveHeroes = [
   { name: "Mira", level: 58 },
   { name: "Rook", level: 56 },
 ];
-
-const orderOptions = ["Flank", "Press", "Hold"];
 
 function hpClass(hp, maxHp) {
   const ratio = hp / maxHp;
@@ -47,12 +41,11 @@ function buildDefaultPlan(state) {
     abilityId: lead ? HERO_LIBRARY[lead.name].abilities[0].id : "",
     assistId: assist?.id ?? "brace",
     targetId: target?.id ?? "",
-    crownBreak: false,
   };
 }
 
 function HealthBar({ value, max, hostile = false }) {
-  const percent = clamp((value / max) * 100, 0, 100);
+  const percent = Math.max(0, (value / max) * 100);
   return (
     <span
       className={`health-track ${hostile ? "is-hostile" : ""}`}
@@ -65,8 +58,7 @@ function HealthBar({ value, max, hostile = false }) {
 
 export function App() {
   const [heroes, setHeroes] = useState(startingHeroes);
-  const [orders, setOrders] = useState(["Flank", "Press", "Hold"]);
-  const [changedOrders, setChangedOrders] = useState([false, false, false]);
+  const [doctrine, setDoctrine] = useState("scout");
   const [editingSlot, setEditingSlot] = useState(null);
   const [activeLane, setActiveLane] = useState(null);
   const [toast, setToast] = useState("");
@@ -75,7 +67,6 @@ export function App() {
   const [plan, setPlan] = useState(null);
   const [seconds, setSeconds] = useState(12);
   const [lastImpact, setLastImpact] = useState(null);
-  const [tier, setTier] = useState(1);
 
   const available = useMemo(() => {
     const selectedNames = new Set(heroes.map((hero) => hero.name));
@@ -84,8 +75,8 @@ export function App() {
       .map((hero) => ({ ...hero, role: HERO_LIBRARY[hero.name].role }));
   }, [heroes]);
 
-  const intent = useMemo(
-    () => (combat ? getEnemyIntent(combat) : null),
+  const forecast = useMemo(
+    () => (combat ? getEnemyForecast(combat) : null),
     [combat],
   );
   const lead = combat?.heroes.find((hero) => hero.id === plan?.leadId) ?? null;
@@ -96,14 +87,6 @@ export function App() {
     : null;
   const planError =
     combat && plan ? validatePlan(combat, plan) : "Choose a plan.";
-  const forecast = useMemo(
-    () => (combat && plan && !planError ? getPlanForecast(combat, plan) : null),
-    [combat, plan, planError],
-  );
-  const resultScore = useMemo(
-    () => (combat?.outcome ? scoreCombat(combat) : null),
-    [combat],
-  );
 
   function chooseHero(hero) {
     if (editingSlot === null) return;
@@ -112,37 +95,20 @@ export function App() {
         index === editingSlot ? { name: hero.name, level: hero.level } : entry,
       ),
     );
-    setChangedOrders((current) =>
-      current.map((changed, index) => (index === editingSlot ? true : changed)),
-    );
     setToast(`${hero.name} joins your three`);
     setEditingSlot(null);
   }
 
-  function cycleOrder(index) {
-    setOrders((current) =>
-      current.map((order, orderIndex) =>
-        orderIndex === index
-          ? orderOptions[
-              (orderOptions.indexOf(order) + 1) % orderOptions.length
-            ]
-          : order,
-      ),
-    );
-    setChangedOrders((current) =>
-      current.map((changed, orderIndex) =>
-        orderIndex === index ? true : changed,
-      ),
-    );
-    setActiveLane(index);
+  function chooseDoctrine(id) {
+    setDoctrine(id);
+    setToast(`${DOCTRINES[id].name} doctrine selected`);
   }
 
-  function startCombat(nextTier = tier) {
+  function startCombat() {
     const initial = createCombatState(
       heroes.map((hero) => hero.name),
-      { orders, tier: nextTier },
+      doctrine,
     );
-    setTier(nextTier);
     setCombat(initial);
     setPlan(buildDefaultPlan(initial));
     setSeconds(12);
@@ -197,7 +163,7 @@ export function App() {
           setPlan(buildDefaultPlan(next));
           setSeconds(12);
           setPhase("battle");
-          setToast(`Round ${next.round} — enemy intent updated`);
+          setToast(`Round ${next.round} — new rival signals detected`);
         }
       }, 720);
     },
@@ -218,13 +184,12 @@ export function App() {
   }, [commitCombat, phase, seconds]);
 
   function restart() {
-    setTier(1);
     setPhase("setup");
     setCombat(null);
     setPlan(null);
     setSeconds(12);
     setLastImpact(null);
-    setToast("Adjust your three or opening orders");
+    setToast("Adjust your three or opening doctrine");
   }
 
   function notify(label) {
@@ -265,38 +230,42 @@ export function App() {
             </div>
 
             <div className="lane-hitboxes" aria-label="Arena lanes">
-              {orders.map((order, index) => (
+              {heroes.map((hero, index) => (
                 <button
                   key={`lane-${index}`}
                   className={`lane-hitbox lane-${index + 1} ${activeLane === index ? "is-active" : ""}`}
                   onClick={() => setActiveLane(index)}
-                  aria-label={`Inspect lane ${index + 1}: ${heroes[index].name} will ${order}`}
+                  aria-label={`Inspect lane ${index + 1}: ${hero.name}, ${HERO_LIBRARY[hero.name].role}`}
                 >
-                  <span>{heroes[index].name}</span>
-                  <strong>{order}</strong>
+                  <span>{hero.name}</span>
+                  <strong>{HERO_LIBRARY[hero.name].role}</strong>
                 </button>
               ))}
             </div>
 
-            <div className="orders-panel" aria-label="Opening orders">
-              <p className="panel-kicker">Opening orders</p>
-              {orders.map((order, index) => (
+            <div
+              className="orders-panel doctrine-panel"
+              aria-label="Choose an opening doctrine"
+            >
+              <p className="panel-kicker">Opening doctrine</p>
+              {Object.values(DOCTRINES).map((entry, index) => (
                 <button
-                  className={`order-row ${activeLane === index ? "is-active" : ""} ${changedOrders[index] ? "has-change" : ""}`}
-                  key={`${heroes[index].name}-${index}`}
-                  onClick={() => cycleOrder(index)}
-                  aria-label={`Cycle opening order for ${heroes[index].name}. Current order: ${order}`}
+                  className={`order-row ${doctrine === entry.id ? "is-selected" : ""}`}
+                  key={entry.id}
+                  onClick={() => chooseDoctrine(entry.id)}
+                  aria-pressed={doctrine === entry.id}
+                  aria-label={`${entry.name}: ${entry.description}`}
                 >
                   <span className="order-number">{index + 1}</span>
                   <span className="order-copy">
-                    <small>{heroes[index].name}</small>
-                    <strong>{order}</strong>
+                    <small>{entry.short}</small>
+                    <strong>{entry.name}</strong>
                   </span>
                 </button>
               ))}
             </div>
 
-            <button className="commit-button" onClick={() => startCombat(1)}>
+            <button className="commit-button" onClick={startCombat}>
               Enter arena
             </button>
           </>
@@ -304,23 +273,26 @@ export function App() {
           <>
             <header className="combat-header">
               <div className="round-chip">
-                <small>Tier {combat.tier} · Round</small>
+                <small>Round</small>
                 <strong>{combat.round}</strong>
               </div>
-              <div className="intent-card">
-                <span className="intent-icon">!</span>
+              <div
+                className={`intent-card ${forecast?.exact ? "is-exact" : "is-uncertain"}`}
+              >
+                <span className="intent-icon">◉</span>
                 <span>
-                  <small>Revealed rival intent</small>
+                  <small>
+                    {forecast?.exact
+                      ? "Scouted rival intent"
+                      : `Rival forecast · ${forecast?.confidence}%`}
+                  </small>
                   <strong>
-                    {intent?.actorName} · {intent?.name}
+                    {forecast?.actorName} · {forecast?.headline}
                   </strong>
                 </span>
                 <span className="intent-target">
-                  Target: {intent?.targetLabel}
-                  <small>{intent?.description}</small>
-                  {intent?.support ? (
-                    <em>Support: {intent.support.label}</em>
-                  ) : null}
+                  {forecast?.targetLabel}
+                  <small>{forecast?.description}</small>
                 </span>
               </div>
               <div className={`timer-chip ${seconds <= 4 ? "is-urgent" : ""}`}>
@@ -328,26 +300,23 @@ export function App() {
                 <strong>{seconds}</strong>
               </div>
               <div className="energy-chip">
-                <small>Wildlight · Momentum</small>
+                <small>Wildlight</small>
                 <strong>
                   {"◆".repeat(combat.energy)}
                   <span>{"◇".repeat(5 - combat.energy)}</span>
                 </strong>
-                <em>
-                  {"●".repeat(combat.momentum)}
-                  {"○".repeat(MAX_MOMENTUM - combat.momentum)}
-                </em>
               </div>
             </header>
 
             <aside className="squad-status" aria-label="Your squad status">
               <p className="combat-kicker">Choose your lead</p>
               {combat.heroes.map((hero, index) => {
-                const threatened = intent?.targetIds.includes(hero.id);
+                const threatened = forecast?.targetIds.includes(hero.id);
                 return (
                   <button
                     key={hero.id}
                     className={`unit-status ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
+                    data-risk={forecast?.exact ? "Target" : "At risk"}
                     onClick={() => hero.hp > 0 && selectLead(hero)}
                     disabled={hero.hp <= 0 || phase === "resolving"}
                   >
@@ -355,8 +324,8 @@ export function App() {
                     <span className="unit-copy">
                       <strong>{hero.name}</strong>
                       <small>
-                        {hero.role} · {hero.order}
-                        {threatened ? ` · ${intent.name}` : ""}
+                        {hero.role}
+                        {threatened ? " · under pressure" : ""}
                       </small>
                       <HealthBar value={hero.hp} max={hero.maxHp} />
                     </span>
@@ -455,7 +424,7 @@ export function App() {
                           <strong>{hero.name}</strong>
                           <small>
                             {ready
-                              ? `${HERO_LIBRARY[hero.name].assist.name} · ${HERO_LIBRARY[hero.name].assist.description}`
+                              ? HERO_LIBRARY[hero.name].assist.name
                               : `Ready round ${hero.assistReadyRound}`}
                           </small>
                         </button>
@@ -478,39 +447,6 @@ export function App() {
                 <p className="combat-kicker">
                   <span>3</span> Commit
                 </p>
-                <div className="forecast-panel" aria-live="polite">
-                  <span>
-                    <strong>{forecast?.damageDealt ?? "—"}</strong> dealt
-                  </span>
-                  <span>
-                    <strong>{forecast?.damageTaken ?? "—"}</strong> taken
-                  </span>
-                  <small>
-                    {forecast?.doctrineTrigger
-                      ? `${forecast.doctrineTrigger} · +1 momentum`
-                      : (DOCTRINE_LIBRARY[lead?.order]?.short ??
-                        "Read the intent")}
-                  </small>
-                </div>
-                <button
-                  className={`crown-break ${plan.crownBreak ? "is-selected" : ""}`}
-                  onClick={() =>
-                    setPlan((current) => ({
-                      ...current,
-                      crownBreak: !current.crownBreak,
-                    }))
-                  }
-                  disabled={
-                    combat.momentum < MAX_MOMENTUM || phase === "resolving"
-                  }
-                >
-                  Crown Break
-                  <small>
-                    {combat.momentum < MAX_MOMENTUM
-                      ? `${MAX_MOMENTUM - combat.momentum} momentum needed`
-                      : "+18 · deny support"}
-                  </small>
-                </button>
                 <button
                   className="lock-plan"
                   onClick={() => commitCombat(false)}
@@ -526,9 +462,18 @@ export function App() {
             </section>
 
             <section className="combat-log" aria-label="Combat recap">
-              <p className="combat-kicker">Last clash</p>
-              <p>{combat.log[0]}</p>
-              <p>{combat.log[1]}</p>
+              <p className="combat-kicker">Clash read</p>
+              {combat.debrief ? (
+                <>
+                  <strong>{combat.debrief.grade}</strong>
+                  <p>{combat.debrief.summary}</p>
+                </>
+              ) : (
+                <>
+                  <strong>Signals incomplete</strong>
+                  <p>{combat.log[0]}</p>
+                </>
+              )}
             </section>
           </>
         ) : null}
@@ -585,7 +530,8 @@ export function App() {
                 ))}
               </div>
               <p className="drawer-note">
-                Changing a champion keeps their current lane and opening order.
+                Changing a champion keeps their current lane and selected
+                doctrine.
               </p>
             </aside>
           </div>
@@ -594,9 +540,7 @@ export function App() {
         {phase === "result" && combat && (
           <div className="result-backdrop">
             <section className={`result-card is-${combat.outcome}`}>
-              <p className="panel-kicker">
-                Tier {combat.tier} complete · {resultScore?.rank} rank
-              </p>
+              <p className="panel-kicker">Crown Arena complete</p>
               <h1>
                 {combat.outcome === "victory"
                   ? "The rival line breaks"
@@ -605,38 +549,12 @@ export function App() {
                     : "Mutual ruin"}
               </h1>
               <p>
-                {combat.outcome === "victory"
-                  ? `Victory in ${combat.round} rounds. Your read became the result.`
-                  : "Adjust the lead, reserve energy, and answer the revealed threat."}
+                {combat.debrief?.summary ??
+                  "Adjust the doctrine, lead, and support to change the exchange."}
               </p>
-              <div className="result-stats">
-                <span>
-                  <small>Score</small>
-                  <strong>{resultScore?.score}</strong>
-                </span>
-                <span>
-                  <small>Damage</small>
-                  <strong>{combat.stats.damageDealt}</strong>
-                </span>
-                <span>
-                  <small>Reads</small>
-                  <strong>{combat.stats.doctrineTriggers}</strong>
-                </span>
-                <span>
-                  <small>Breaks</small>
-                  <strong>{combat.stats.crownBreaks}</strong>
-                </span>
-              </div>
               <div className="result-actions">
                 <button onClick={restart}>Adjust doctrine</button>
-                <button onClick={() => startCombat(combat.tier)}>
-                  Replay rival
-                </button>
-                {combat.outcome === "victory" ? (
-                  <button onClick={() => startCombat(combat.tier + 1)}>
-                    Challenge tier {combat.tier + 1}
-                  </button>
-                ) : null}
+                <button onClick={startCombat}>Replay rival</button>
               </div>
             </section>
           </div>

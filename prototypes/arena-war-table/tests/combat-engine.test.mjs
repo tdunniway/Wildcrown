@@ -5,10 +5,9 @@ import {
   HERO_LIBRARY,
   abilityIsReady,
   createCombatState,
+  getEnemyForecast,
   getEnemyIntent,
-  getPlanForecast,
   resolveRound,
-  scoreCombat,
   validatePlan,
 } from "../src/combatEngine.js";
 
@@ -36,14 +35,35 @@ function safePlan(state) {
   };
 }
 
-test("opening state reveals a deterministic, answerable intent", () => {
+test("Scout reveals the opening read, then forecasts become uncertain", () => {
   const state = createCombatState(["Lyra", "Torin", "Vex"]);
   const intent = getEnemyIntent(state);
+  const openingForecast = getEnemyForecast(state);
 
   assert.equal(state.energy, 3);
   assert.equal(intent.name, "Crushing Advance");
   assert.equal(intent.targetLabel, "Lyra");
   assert.equal(intent.damage, 26);
+  assert.equal(openingForecast.exact, true);
+
+  const next = resolveRound(state, safePlan(state));
+  const nextForecast = getEnemyForecast(next);
+  assert.equal(nextForecast.exact, false);
+  assert.match(nextForecast.headline, /\//);
+});
+
+test("opening doctrines create distinct defensive and offensive trades", () => {
+  const scoutState = createCombatState(["Lyra", "Torin", "Vex"], "scout");
+  const fortifyState = createCombatState(["Lyra", "Torin", "Vex"], "fortify");
+  const ambushState = createCombatState(["Lyra", "Torin", "Vex"], "ambush");
+
+  const scout = resolveRound(scoutState, safePlan(scoutState));
+  const fortify = resolveRound(fortifyState, safePlan(fortifyState));
+  const ambush = resolveRound(ambushState, safePlan(ambushState));
+
+  assert.ok(fortify.heroes[0].hp > scout.heroes[0].hp);
+  assert.ok(ambush.enemies[0].hp < scout.enemies[0].hp);
+  assert.equal(fortify.debrief.grade, "Counter-read held");
 });
 
 test("a planned clash spends energy, applies support, and starts cooldowns", () => {
@@ -89,66 +109,4 @@ test("legal fallback play always reaches a result without deadlocking", () => {
 
   assert.ok(state.outcome, "combat should reach victory, defeat, or draw");
   assert.ok(resolvedRounds < 30, `combat took ${resolvedRounds} rounds`);
-});
-
-test("Flank converts a correct support read into damage and momentum", () => {
-  const state = createCombatState(["Lyra", "Torin", "Vex"], {
-    orders: ["Flank", "Press", "Hold"],
-  });
-  const plan = {
-    leadId: "lyra-0",
-    abilityId: "quickshot",
-    assistId: "brace",
-    targetId: "branna-rival",
-    crownBreak: false,
-  };
-
-  const next = resolveRound(state, plan);
-
-  assert.equal(next.enemies[1].hp, 80);
-  assert.equal(next.momentum, 1);
-  assert.equal(next.lastClash.doctrineTrigger, "Flank intercept");
-  assert.equal(next.lastClash.enemySupportCancelled, true);
-});
-
-test("Crown Break spends full momentum and interrupts enemy support", () => {
-  const state = {
-    ...createCombatState(["Lyra", "Torin", "Vex"]),
-    momentum: 3,
-  };
-  const plan = {
-    leadId: "lyra-0",
-    abilityId: "quickshot",
-    assistId: "brace",
-    targetId: "kael",
-    crownBreak: true,
-  };
-
-  const forecast = getPlanForecast(state, plan);
-  const next = resolveRound(state, plan);
-
-  assert.equal(forecast.damageDealt, 38);
-  assert.equal(next.enemies[0].hp, 54);
-  assert.equal(next.momentum, 0);
-  assert.equal(next.stats.crownBreaks, 1);
-  assert.equal(next.lastClash.enemySupportCancelled, true);
-});
-
-test("elite tiers increase rival durability and threat", () => {
-  const state = createCombatState(["Lyra", "Torin", "Vex"], { tier: 3 });
-  const intent = getEnemyIntent(state);
-
-  assert.equal(state.enemies[0].maxHp, 120);
-  assert.equal(intent.damage, 32);
-  assert.equal(state.tier, 3);
-});
-
-test("completed combat produces a readable score and rank", () => {
-  const state = createCombatState(["Lyra", "Torin", "Vex"]);
-  state.outcome = "victory";
-  state.stats.doctrineTriggers = 2;
-  const result = scoreCombat(state);
-
-  assert.ok(result.score > 0);
-  assert.ok(["Steel", "Crown", "Sovereign"].includes(result.rank));
 });
