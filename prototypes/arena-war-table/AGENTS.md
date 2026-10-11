@@ -17,6 +17,7 @@ Before making substantial visual changes, use the Product Design plugin's `get-c
 - Keep Command Authority and the Commit action together in the top battle-status header so control mode and execution state are always visible.
 - Treat the General as the persistent player-facing commander: show readable advice plus limited powers, quick items, and a support weapon with visible cooldown or consumption state.
 - Every deployed hero commands a selectable army. Army and movement pairings must create visible, forecastable mechanical synergies rather than cosmetic labels.
+- Keep the battle UI strategically rich but visually calm: use progressive disclosure, show one command decision at a time, preserve a compact summary of the full plan, and keep advanced General tools collapsed until requested.
 
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 

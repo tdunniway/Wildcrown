@@ -5067,3 +5067,375 @@ button:focus-visible {
     grid-row: auto;
   }
 }
+
+/* UI clarity pass v5: progressive disclosure, stronger hierarchy, fewer
+   simultaneous decisions, and readable/touch-safe controls at every size. */
+.general-panel .general-tool-group,
+.general-panel > .support-weapon {
+  display: none;
+}
+
+.general-panel.is-open .general-tool-group {
+  display: grid;
+}
+
+.general-panel.is-open > .support-weapon {
+  display: grid;
+}
+
+.general-tools-toggle {
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.2rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid rgb(109 151 151 / 42%);
+  background: rgb(8 33 41 / 82%);
+  color: #e9d79f;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.general-tools-toggle strong {
+  color: #79dfe0;
+}
+
+.general-advice p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.clash-core .intent-rune,
+.clash-core .ai-insight {
+  display: none;
+}
+
+.command-progress {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.command-progress button {
+  min-width: 0;
+  min-height: 3rem;
+  display: grid;
+  grid-template-columns: 1.35rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.2rem 0.4rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid rgb(79 116 120 / 46%);
+  background: rgb(6 27 35 / 92%);
+  color: #aebfbd;
+  cursor: pointer;
+  text-align: left;
+}
+
+.command-progress button > span {
+  grid-row: 1 / 3;
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 0.75rem;
+}
+
+.command-progress small,
+.command-progress strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-progress small {
+  color: #91aaab;
+  font-size: 0.75rem;
+}
+
+.command-progress strong {
+  color: #ecd9a4;
+  font-size: 0.78rem;
+}
+
+.command-progress button.is-current {
+  border-color: #e7be5a;
+  background: rgb(90 62 14 / 58%);
+  color: #ffe299;
+}
+
+.command-progress button.is-complete:not(.is-current) > span {
+  border-color: #54cacb;
+  color: #91efea;
+}
+
+.command-dock-actions {
+  display: grid;
+  grid-template-columns: minmax(4.5rem, 0.72fr) minmax(0, 1fr) minmax(5.5rem, 0.9fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.command-dock-actions button {
+  min-height: 3rem;
+  border: 1px solid rgb(203 158 65 / 56%);
+  background: #102b33;
+  color: #f1dda6;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.command-dock-actions button:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.command-dock-actions > span {
+  display: grid;
+  text-align: center;
+}
+
+.command-dock-actions small {
+  color: #8eafb1;
+  font-size: 0.75rem;
+}
+
+.command-dock-actions strong {
+  color: #f3d687;
+  font-size: 0.875rem;
+}
+
+.command-dock-actions .command-dock-commit {
+  background: linear-gradient(180deg, #a97927, #5d3d0d);
+  color: #fff1be;
+}
+
+.strategy-card.is-selected,
+.movement-card.is-selected,
+.tactic-card.is-selected,
+.ability-card.is-selected,
+.assist-card.is-selected,
+.general-power.is-selected,
+.battle-item.is-selected {
+  border-color: #56d6d3;
+  box-shadow: inset 3px 0 0 #56d6d3;
+}
+
+@media (min-width: 761px) and (min-aspect-ratio: 1 / 1) {
+  body .battlefield-board {
+    bottom: 40.2%;
+  }
+
+  body .command-deck {
+    right: 1.2%;
+    bottom: 10.8%;
+    left: 1.2%;
+    height: 27.6%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 0.55rem;
+    padding: 0.6rem;
+  }
+
+  body .command-deck .command-progress {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  body .command-column {
+    display: none;
+  }
+
+  body .command-column.is-command-active {
+    grid-column: 1;
+    grid-row: 2;
+    display: block;
+    overflow: auto;
+    padding: 0.55rem;
+    border: 1px solid rgb(91 128 132 / 30%);
+    border-right: 1px solid rgb(91 128 132 / 30%);
+    background: rgb(5 23 31 / 68%);
+  }
+
+  body .command-column .combat-kicker {
+    margin-bottom: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  body .strategy-grid,
+  body .movement-grid,
+  body .tactic-grid,
+  body .ability-grid,
+  body .assist-grid {
+    height: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+    gap: 0.5rem;
+  }
+
+  body .movement-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  body .strategy-card,
+  body .movement-card,
+  body .tactic-card,
+  body .ability-card,
+  body .assist-card {
+    min-height: 4.25rem;
+    padding: 0.65rem;
+  }
+
+  body .strategy-card strong,
+  body .movement-card strong,
+  body .tactic-card strong,
+  body .ability-card strong,
+  body .assist-card strong {
+    font-size: 0.875rem;
+  }
+
+  body .strategy-card small,
+  body .movement-card small,
+  body .tactic-card small,
+  body .ability-card small,
+  body .assist-card small,
+  body .army-synergy-note {
+    font-size: 0.75rem;
+  }
+
+  body .command-dock-actions {
+    grid-column: 2;
+    grid-row: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: center;
+    padding: 0.75rem;
+    border: 1px solid rgb(91 128 132 / 30%);
+    background: rgb(5 23 31 / 68%);
+  }
+
+  body .command-dock-actions > span {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    margin-bottom: 0.25rem;
+  }
+
+  .general-panel {
+    overflow: auto;
+  }
+
+  .general-panel:not(.is-open) {
+    overflow: hidden;
+  }
+
+  .general-panel:not(.is-open) .general-advice {
+    flex: 1;
+  }
+
+  .round-objective {
+    grid-template-columns: minmax(7rem, 0.9fr) minmax(0, 1.2fr);
+  }
+
+  .round-objective > b {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .round-objective b em {
+    text-align: right;
+  }
+
+  .clash-core {
+    gap: 0.5rem;
+  }
+
+  .counter-callout,
+  .clash-preview {
+    padding: 0.65rem;
+  }
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
+  .arena-reference {
+    left: 0;
+    max-width: 100%;
+  }
+
+  body .combat-header .intent-card {
+    min-height: 4.5rem;
+  }
+
+  body .combat-header .intent-target small {
+    display: none;
+  }
+
+  .general-stats span {
+    min-height: 2.75rem;
+    display: grid;
+    place-content: center;
+  }
+
+  .general-tools-toggle {
+    min-height: 3.25rem;
+    font-size: 1rem;
+  }
+
+  body .command-deck {
+    max-height: min(23rem, 56vh);
+  }
+
+  .command-progress button {
+    min-height: 3.25rem;
+    grid-template-columns: 1.3rem minmax(0, 1fr);
+    padding: 0.35rem;
+  }
+
+  .command-progress button > span {
+    grid-row: 1;
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .command-progress small {
+    display: none;
+  }
+
+  .command-progress strong {
+    font-size: 0.75rem;
+    line-height: 1.12;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  body .command-column {
+    padding: 0.55rem;
+  }
+
+  body .strategy-card,
+  body .movement-card,
+  body .tactic-card,
+  body .ability-card,
+  body .assist-card {
+    min-height: 4.25rem;
+  }
+
+  .command-dock-actions button {
+    min-height: 3.25rem;
+    font-size: 1rem;
+  }
+
+  .command-dock-actions strong {
+    font-size: 0.95rem;
+  }
+}
