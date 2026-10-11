@@ -1,0 +1,37 @@
+.prototype-start {
+  display: grid;
+  min-height: 100vh;
+  padding: 2rem;
+  place-content: center;
+  text-align: center;
+  background:
+    radial-gradient(
+      circle at 50% 20%,
+      rgb(217 169 76 / 12%),
+      transparent 30rem
+    ),
+    var(--wc-ink);
+}
+
+.prototype-start p {
+  margin: 0 0 0.75rem;
+  color: var(--wc-gold);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.prototype-start h1 {
+  margin: 0;
+  color: var(--wc-gold-bright);
+  font-family: var(--wc-font-display);
+  font-size: clamp(2.25rem, 8vw, 6rem);
+}
+
+.prototype-start span {
+  max-width: 38rem;
+  margin: 1rem auto 0;
+  color: var(--wc-muted);
+  line-height: 1.6;
+}

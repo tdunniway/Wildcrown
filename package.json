@@ -1,0 +1,31 @@
+{
+  "name": "wildcrown-prototypes",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Wildcrown's shared prototyping monorepo.",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "prototypes/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n hub,arena -c cyan,magenta \"npm:dev:hub\" \"npm:dev:arena\"",
+    "dev:hub": "npm run dev --workspace @wildcrown/prototype-hub",
+    "dev:arena": "npm run dev --workspace @wildcrown/arena-war-table",
+    "build": "npm run build:workspaces && node tooling/assemble-showcase.mjs && node tooling/verify-build.mjs",
+    "build:workspaces": "npm run build --workspaces --if-present",
+    "test": "npm run test:repo && npm run test --workspaces --if-present",
+    "test:repo": "node --test tooling/tests/*.test.mjs",
+    "check": "npm run format:check && npm run test && npm run build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "new:prototype": "node tooling/create-prototype.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "prettier": "^3.9.10"
+  }
+}

@@ -1,0 +1,7 @@
+**/dist
+**/node_modules
+**/.openai
+**/qa
+*.docx
+*.png
+package-lock.json

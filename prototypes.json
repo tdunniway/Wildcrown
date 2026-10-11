@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "prototypes": [
+    {
+      "id": "arena-war-table",
+      "name": "Crown Arena War Table",
+      "description": "A playable three-hero planning battle with visible rival intent, Wildlight economy, assists, cooldowns, and causal combat resolution.",
+      "status": "playable",
+      "workspace": "@wildcrown/arena-war-table",
+      "root": "prototypes/arena-war-table",
+      "outputDir": "dist/client",
+      "basePath": "/prototypes/arena-war-table/",
+      "localUrl": "http://localhost:4173/",
+      "previewImage": "/previews/arena-war-table.png"
+    }
+  ]
+}

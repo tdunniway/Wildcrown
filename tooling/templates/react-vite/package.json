@@ -1,0 +1,20 @@
+{
+  "name": "@wildcrown/__SLUG__",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@wildcrown/prototype-kit": "*",
+    "@wildcrown/ui": "*",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@wildcrown/vite-config": "*",
+    "vite": "^8.3.4"
+  }
+}
