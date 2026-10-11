@@ -1,5 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowLeft,
+  ArrowRight,
+  BadgeCheck,
+  BrainCircuit,
+  Check,
+  ChevronDown,
+  CircleDashed,
+  Crosshair,
+  Crown,
+  Eye,
+  Flag,
+  Footprints,
+  Grid3X3,
+  LockKeyhole,
+  Shield,
+  Sparkles,
+  Swords,
+  Target,
+  Users,
+  WandSparkles,
+  Zap,
+} from "lucide-react";
+import {
   ARMY_TYPES,
   BATTLE_ITEMS,
   COMMAND_STYLES,
@@ -65,13 +88,21 @@ const reserveHeroes = [
 ];
 
 const COMMAND_STEPS = [
-  { id: "formation", label: "Formation" },
-  { id: "strategy", label: "Strategy" },
-  { id: "movement", label: "Movement" },
-  { id: "response", label: "Response" },
-  { id: "ability", label: "Ability" },
-  { id: "support", label: "Support" },
+  { id: "formation", label: "Formation", Icon: Grid3X3, required: true },
+  { id: "strategy", label: "Strategy", Icon: BrainCircuit, required: true },
+  { id: "movement", label: "Movement", Icon: Footprints, required: true },
+  { id: "response", label: "Response", Icon: Shield, required: true },
+  { id: "ability", label: "Ability", Icon: WandSparkles, required: true },
+  { id: "support", label: "Support", Icon: Users, required: true },
 ];
+
+const SETUP_HERO_ICONS = [Crosshair, Shield, Zap];
+const CONTROL_MODE_ICONS = {
+  auto: Sparkles,
+  watch: Eye,
+  assist: BrainCircuit,
+  command: Swords,
+};
 
 const RESOLUTION_BEATS = [
   { label: "Formation", detail: "Armies take their ordered positions." },
@@ -214,15 +245,6 @@ export function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [lastObjective, setLastObjective] = useState(null);
   const [viewMode, setViewMode] = useState("plan");
-  const startsWithCompactGenerals = () =>
-    typeof window !== "undefined" &&
-    window.matchMedia("(max-width: 760px), (max-aspect-ratio: 1 / 1)").matches;
-  const [allyGeneralOpen, setAllyGeneralOpen] = useState(
-    () => !startsWithCompactGenerals(),
-  );
-  const [enemyGeneralOpen, setEnemyGeneralOpen] = useState(
-    () => !startsWithCompactGenerals(),
-  );
 
   const available = useMemo(() => {
     const selectedNames = new Set(heroes.map((hero) => hero.name));
@@ -270,6 +292,14 @@ export function App() {
       ? "Brace"
       : (combat?.heroes.find((hero) => hero.id === plan?.assistId)?.name ??
         "Choose"),
+  ];
+  const commandStatuses = [
+    Boolean(plan?.formationId),
+    Boolean(commandStyle),
+    Boolean(plan?.movementId),
+    Boolean(plan?.tacticId),
+    Boolean(plan?.leadId && plan?.abilityId),
+    Boolean(plan?.assistId),
   ];
 
   const selectedAbility = lead
@@ -386,6 +416,7 @@ export function App() {
         ? "Full authority is yours. Read the signal and build the answer."
         : (opening?.explanation ?? "The commander is reading the rival line."),
     );
+    window.scrollTo({ top: 0, behavior: "auto" });
     if (controlMode === "auto") {
       setPhase("resolving");
       setViewMode("clash");
@@ -602,6 +633,7 @@ export function App() {
   }
 
   function restart() {
+    window.scrollTo({ top: 0, behavior: "auto" });
     setPhase("setup");
     setCombat(null);
     setPlan(null);
@@ -655,155 +687,235 @@ export function App() {
         </header>
 
         {phase === "setup" ? (
-          <>
-            <div className="hero-hitboxes" aria-label="Selected champions">
-              {heroes.map((hero, index) => (
-                <button
-                  className={`hero-hitbox ${editingSlot === index ? "is-editing" : ""}`}
-                  key={`${hero.name}-${index}`}
-                  onClick={() => setEditingSlot(index)}
-                  aria-label={`Change ${hero.name}, slot ${index + 1}`}
-                >
-                  <span className="interaction-label">Change {hero.name}</span>
-                  {hero.name !== startingHeroes[index].name && (
-                    <span className="selection-badge">
-                      {hero.name} selected
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="lane-hitboxes" aria-label="Arena lanes">
-              {heroes.map((hero, index) => (
-                <button
-                  key={`lane-${index}`}
-                  className={`lane-hitbox lane-${index + 1} ${activeLane === index ? "is-active" : ""}`}
-                  onClick={() => setActiveLane(index)}
-                  aria-label={`Inspect lane ${index + 1}: ${hero.name}, ${HERO_LIBRARY[hero.name].role}`}
-                >
-                  <span>{hero.name}</span>
-                  <strong>{HERO_LIBRARY[hero.name].role}</strong>
-                </button>
-              ))}
-            </div>
+          <section
+            className="setup-command-screen"
+            aria-label="Battle planning setup"
+          >
+            <header className="setup-titlebar">
+              <span className="setup-crest">
+                <Crown aria-hidden="true" />
+              </span>
+              <span>
+                <small>War council</small>
+                <h1>Assemble your strike force</h1>
+                <p>
+                  Choose three heroes, assign their armies, then set how much
+                  control you want.
+                </p>
+              </span>
+              <span className="setup-readiness">
+                <BadgeCheck aria-hidden="true" />
+                <b>3 / 3 ready</b>
+              </span>
+            </header>
 
             <div
-              className="orders-panel doctrine-panel"
-              aria-label="Choose an opening doctrine"
+              className="setup-hero-grid"
+              aria-label="Selected champions and armies"
             >
-              <p className="panel-kicker">Opening doctrine</p>
-              {Object.values(DOCTRINES).map((entry, index) => (
-                <button
-                  className={`order-row ${doctrine === entry.id ? "is-selected" : ""}`}
-                  key={entry.id}
-                  onClick={() => chooseDoctrine(entry.id)}
-                  aria-pressed={doctrine === entry.id}
-                  aria-label={`${entry.name}: ${entry.description}`}
-                >
-                  <span className="order-number">{index + 1}</span>
-                  <span className="order-copy">
-                    <small>{entry.short}</small>
-                    <strong>{entry.name}</strong>
-                  </span>
-                </button>
-              ))}
+              {heroes.map((hero, index) => {
+                const HeroIcon = SETUP_HERO_ICONS[index] ?? Swords;
+                return (
+                  <article
+                    className={`setup-hero-card ${editingSlot === index ? "is-editing" : ""}`}
+                    key={`${hero.name}-${index}`}
+                  >
+                    <div className="setup-hero-card-head">
+                      <span className="setup-slot">{index + 1}</span>
+                      <span className="setup-hero-medallion">
+                        <HeroIcon aria-hidden="true" />
+                      </span>
+                      <span className="setup-hero-copy">
+                        <small>{HERO_LIBRARY[hero.name].role}</small>
+                        <strong>{hero.name}</strong>
+                        <span>Level {hero.level}</span>
+                      </span>
+                      <button
+                        className="setup-change-hero"
+                        onClick={() => setEditingSlot(index)}
+                        aria-label={`Change ${hero.name}, slot ${index + 1}`}
+                      >
+                        Change
+                      </button>
+                    </div>
+                    <label className="setup-army-select">
+                      <span>
+                        <Flag aria-hidden="true" /> Army command
+                      </span>
+                      <span className="setup-select-wrap">
+                        <select
+                          value={hero.armyId}
+                          onChange={(event) =>
+                            assignArmy(index, event.target.value)
+                          }
+                          aria-label={`Army commanded by ${hero.name}`}
+                        >
+                          {Object.values(ARMY_TYPES).map((army) => (
+                            <option value={army.id} key={army.id}>
+                              {army.name} · {army.short}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown aria-hidden="true" />
+                      </span>
+                    </label>
+                  </article>
+                );
+              })}
             </div>
 
-            <section
-              className="authority-setup-panel"
-              aria-label="Choose battle control"
-            >
-              <div className="authority-heading">
-                <p className="panel-kicker">Command authority</p>
-                <strong>{CONTROL_MODES[controlMode].name}</strong>
-                <small>{CONTROL_MODES[controlMode].description}</small>
-              </div>
-              <div className="authority-mode-grid">
-                {Object.values(CONTROL_MODES).map((entry) => (
-                  <button
-                    key={entry.id}
-                    className={controlMode === entry.id ? "is-selected" : ""}
-                    onClick={() => changeControlMode(entry.id)}
-                  >
-                    <strong>{entry.name}</strong>
-                    <small>{entry.short}</small>
-                  </button>
-                ))}
-              </div>
-              <div
-                className="army-assignments"
-                aria-label="Hero army assignments"
+            <div className="setup-options-grid">
+              <section
+                className="setup-panel setup-doctrine-panel"
+                aria-label="Choose an opening doctrine"
               >
-                <p className="setup-subhead">Hero-led armies</p>
-                {heroes.map((hero, index) => (
-                  <label key={`${hero.name}-army`}>
-                    <span>{hero.name}</span>
-                    <select
-                      value={hero.armyId}
-                      onChange={(event) =>
-                        assignArmy(index, event.target.value)
-                      }
-                      aria-label={`Army commanded by ${hero.name}`}
+                <div className="setup-panel-heading">
+                  <Target aria-hidden="true" />
+                  <span>
+                    <small>Opening doctrine</small>
+                    <strong>How do we enter?</strong>
+                  </span>
+                </div>
+                <div className="setup-doctrine-grid">
+                  {Object.values(DOCTRINES).map((entry, index) => (
+                    <button
+                      className={`setup-option-button ${doctrine === entry.id ? "is-selected" : ""}`}
+                      key={entry.id}
+                      onClick={() => chooseDoctrine(entry.id)}
+                      aria-pressed={doctrine === entry.id}
+                      title={entry.description}
                     >
-                      {Object.values(ARMY_TYPES).map((army) => (
-                        <option value={army.id} key={army.id}>
-                          {army.name} · {army.short}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                ))}
-              </div>
-            </section>
+                      <span>{index + 1}</span>
+                      <span>
+                        <strong>{entry.name}</strong>
+                        <small>{entry.short}</small>
+                      </span>
+                      {doctrine === entry.id ? (
+                        <Check aria-hidden="true" />
+                      ) : (
+                        <CircleDashed aria-hidden="true" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </section>
 
-            <button className="commit-button" onClick={startCombat}>
-              {controlMode === "auto" ? "Resolve battle" : "Enter arena"}
-            </button>
-          </>
+              <section
+                className="setup-panel setup-authority-panel"
+                aria-label="Choose battle control"
+              >
+                <div className="setup-panel-heading">
+                  <BrainCircuit aria-hidden="true" />
+                  <span>
+                    <small>Command authority</small>
+                    <strong>{CONTROL_MODES[controlMode].name}</strong>
+                  </span>
+                </div>
+                <p>{CONTROL_MODES[controlMode].description}</p>
+                <div className="setup-authority-grid">
+                  {Object.values(CONTROL_MODES).map((entry) => {
+                    const ModeIcon = CONTROL_MODE_ICONS[entry.id];
+                    return (
+                      <button
+                        key={entry.id}
+                        className={
+                          controlMode === entry.id ? "is-selected" : ""
+                        }
+                        onClick={() => changeControlMode(entry.id)}
+                        aria-pressed={controlMode === entry.id}
+                      >
+                        <ModeIcon aria-hidden="true" />
+                        <span>
+                          <strong>{entry.name}</strong>
+                          <small>{entry.short}</small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            <footer className="setup-actionbar">
+              <span>
+                <LockKeyhole aria-hidden="true" />
+                <small>Setup locks after entry</small>
+              </span>
+              <span className="setup-loadout-summary">
+                <b>{DOCTRINES[doctrine].name}</b>
+                <i />
+                {CONTROL_MODES[controlMode].name}
+              </span>
+              <button className="commit-button" onClick={startCombat}>
+                <span>
+                  {controlMode === "auto" ? "Resolve battle" : "Enter arena"}
+                </span>
+                <ArrowRight aria-hidden="true" />
+              </button>
+            </footer>
+          </section>
         ) : combat && plan ? (
           <>
             <header className="combat-header">
               <div className="round-chip">
-                <small>Round</small>
-                <strong>{combat.round}</strong>
+                <Flag aria-hidden="true" />
+                <span>
+                  <small>Round</small>
+                  <strong>{combat.round}</strong>
+                </span>
               </div>
               <div
                 className={`intent-card ${forecast?.exact ? "is-exact" : "is-uncertain"}`}
               >
-                <span className="intent-icon">!</span>
+                <span className="intent-icon">
+                  <Eye aria-hidden="true" />
+                </span>
                 <span>
-                  <small>{forecast?.kind} intent detected</small>
+                  <small>Rival {forecast?.kind} detected</small>
                   <strong>
                     {forecast?.actorName} · {forecast?.headline}
                   </strong>
                 </span>
-                <span className="intent-target">{forecast?.targetLabel}</span>
+                <span className="intent-target">
+                  <Target aria-hidden="true" /> {forecast?.targetLabel}
+                </span>
               </div>
               {tacticalObjective && (
                 <div
                   className={`header-objective ${tacticalObjective.predicted ? "is-secured" : "is-risk"}`}
                   title={tacticalObjective.detail}
                 >
-                  <small>Round objective</small>
-                  <strong>{tacticalObjective.title}</strong>
-                  <span>{tacticalObjective.progress}</span>
+                  <span className="objective-icon">
+                    <Crosshair aria-hidden="true" />
+                  </span>
+                  <span>
+                    <small>Round objective</small>
+                    <strong>{tacticalObjective.title}</strong>
+                    <em>{tacticalObjective.progress}</em>
+                  </span>
                 </div>
               )}
-              <div className="momentum-chip">
-                <small>Crown</small>
-                <strong>{combat.momentum}/3</strong>
-              </div>
-              <div className="energy-chip">
-                <small>Wildlight</small>
-                <strong>
-                  {"◆".repeat(combat.energy)}
-                  <span>{"◇".repeat(5 - combat.energy)}</span>
-                </strong>
+              <div className="resource-cluster">
+                <div className="momentum-chip">
+                  <Crown aria-hidden="true" />
+                  <span>
+                    <small>Crown</small>
+                    <strong>{combat.momentum}/3</strong>
+                  </span>
+                </div>
+                <div className="energy-chip">
+                  <Sparkles aria-hidden="true" />
+                  <span>
+                    <small>Wildlight</small>
+                    <strong>{combat.energy}/5</strong>
+                  </span>
+                </div>
               </div>
               <div className="battle-status-actions">
                 <label className="authority-select">
-                  <span>Command authority</span>
+                  <span>
+                    <BrainCircuit aria-hidden="true" /> Authority
+                  </span>
                   <select
                     value={controlMode}
                     onChange={(event) => changeControlMode(event.target.value)}
@@ -816,6 +928,7 @@ export function App() {
                       </option>
                     ))}
                   </select>
+                  <ChevronDown aria-hidden="true" />
                 </label>
                 <button
                   className={`header-surge ${plan.useSurge ? "is-selected" : ""}`}
@@ -828,14 +941,21 @@ export function App() {
                   disabled={combat.momentum < 3 || ordersLocked}
                   title="Spend 3 Crown Momentum for +12 damage"
                 >
-                  Surge {combat.momentum}/3
+                  <span className="surge-orb">
+                    <Zap aria-hidden="true" />
+                  </span>
+                  <span>
+                    <small>Power attack</small>
+                    <strong>Surge</strong>
+                  </span>
+                  <b>{combat.momentum}/3</b>
                 </button>
                 <button
                   className="header-commit"
                   onClick={() => commitCombat()}
                   disabled={Boolean(planError) || ordersLocked}
                 >
-                  <small>Battle status</small>
+                  <Swords aria-hidden="true" />
                   <strong>
                     {phase === "resolving" ? "Resolving…" : "Commit"}
                   </strong>
@@ -844,248 +964,261 @@ export function App() {
             </header>
 
             {false && (
-            <section
-              className={`battlefield-board movement-${plan.movementId} ${phase === "resolving" ? `is-clashing resolution-beat-${resolutionStep}` : ""} ${resolutionPaused ? "is-paused" : ""}`}
-              aria-label="Arena battlefield"
-            >
-              {phase === "resolving" && (
-                <div className="combat-vfx" aria-hidden="true">
-                  <span className="combat-vfx-wash" />
-                  <span className="combat-vfx-line" />
-                  <span className="combat-vfx-impact" />
-                  <strong>{RESOLUTION_BEATS[resolutionStep].label}</strong>
-                </div>
-              )}
-              <aside
-                className={`general-panel ${powerDrawerOpen ? "is-open" : ""}`}
-                aria-label="Player General and battle support"
+              <section
+                className={`battlefield-board movement-${plan.movementId} ${phase === "resolving" ? `is-clashing resolution-beat-${resolutionStep}` : ""} ${resolutionPaused ? "is-paused" : ""}`}
+                aria-label="Arena battlefield"
               >
-                <div className="general-identity">
-                  <span className="general-portrait" aria-hidden="true">
-                    S
-                  </span>
-                  <span>
-                    <small>Your General</small>
-                    <strong>{combat.general.name}</strong>
-                    <em>{combat.general.title}</em>
-                  </span>
-                </div>
-                <div className="general-stats" aria-label="General statistics">
-                  <span>
-                    <small>Level</small>
-                    <strong>{combat.general.level}</strong>
-                  </span>
-                  <span>
-                    <small>Command</small>
-                    <strong>{combat.general.command}</strong>
-                  </span>
-                  <span>
-                    <small>Resolve</small>
-                    <strong>{combat.general.resolve}</strong>
-                  </span>
-                </div>
-                <div className="general-advice">
-                  <small>General's advice</small>
-                  <strong>
-                    {combat.debrief?.grade ?? forecast?.counterLabel}
-                  </strong>
-                  <p>{combat.debrief?.summary ?? aiInsight ?? combat.log[0]}</p>
-                </div>
-                <button
-                  className="general-tools-toggle"
-                  onClick={() => setPowerDrawerOpen((current) => !current)}
-                  aria-expanded={powerDrawerOpen}
+                {phase === "resolving" && (
+                  <div className="combat-vfx" aria-hidden="true">
+                    <span className="combat-vfx-wash" />
+                    <span className="combat-vfx-line" />
+                    <span className="combat-vfx-impact" />
+                    <strong>{RESOLUTION_BEATS[resolutionStep].label}</strong>
+                  </div>
+                )}
+                <aside
+                  className={`general-panel ${powerDrawerOpen ? "is-open" : ""}`}
+                  aria-label="Player General and battle support"
                 >
-                  <span>General powers & items</span>
-                  <strong>{powerDrawerOpen ? "Close" : "Open"}</strong>
-                </button>
-                <div className="general-tool-group">
-                  <small>Command powers · choose one</small>
-                  <div className="general-power-grid">
-                    {Object.values(GENERAL_ABILITIES).map((entry) => {
-                      const readyRound =
-                        combat.general.cooldowns[entry.id] ?? 1;
-                      const charges = combat.general.charges[entry.id];
-                      const available =
-                        readyRound <= combat.round &&
-                        (charges === undefined || charges > 0);
-                      const status =
-                        charges !== undefined
-                          ? `${charges} use left`
-                          : available
-                            ? `Ready · ${entry.cooldown} round cooldown`
-                            : `Ready round ${readyRound}`;
-                      return (
+                  <div className="general-identity">
+                    <span className="general-portrait" aria-hidden="true">
+                      S
+                    </span>
+                    <span>
+                      <small>Your General</small>
+                      <strong>{combat.general.name}</strong>
+                      <em>{combat.general.title}</em>
+                    </span>
+                  </div>
+                  <div
+                    className="general-stats"
+                    aria-label="General statistics"
+                  >
+                    <span>
+                      <small>Level</small>
+                      <strong>{combat.general.level}</strong>
+                    </span>
+                    <span>
+                      <small>Command</small>
+                      <strong>{combat.general.command}</strong>
+                    </span>
+                    <span>
+                      <small>Resolve</small>
+                      <strong>{combat.general.resolve}</strong>
+                    </span>
+                  </div>
+                  <div className="general-advice">
+                    <small>General's advice</small>
+                    <strong>
+                      {combat.debrief?.grade ?? forecast?.counterLabel}
+                    </strong>
+                    <p>
+                      {combat.debrief?.summary ?? aiInsight ?? combat.log[0]}
+                    </p>
+                  </div>
+                  <button
+                    className="general-tools-toggle"
+                    onClick={() => setPowerDrawerOpen((current) => !current)}
+                    aria-expanded={powerDrawerOpen}
+                  >
+                    <span>General powers & items</span>
+                    <strong>{powerDrawerOpen ? "Close" : "Open"}</strong>
+                  </button>
+                  <div className="general-tool-group">
+                    <small>Command powers · choose one</small>
+                    <div className="general-power-grid">
+                      {Object.values(GENERAL_ABILITIES).map((entry) => {
+                        const readyRound =
+                          combat.general.cooldowns[entry.id] ?? 1;
+                        const charges = combat.general.charges[entry.id];
+                        const available =
+                          readyRound <= combat.round &&
+                          (charges === undefined || charges > 0);
+                        const status =
+                          charges !== undefined
+                            ? `${charges} use left`
+                            : available
+                              ? `Ready · ${entry.cooldown} round cooldown`
+                              : `Ready round ${readyRound}`;
+                        return (
+                          <button
+                            key={entry.id}
+                            className={`general-power ${plan.generalAbilityId === entry.id ? "is-selected" : ""}`}
+                            onClick={() =>
+                              setPlan((current) => ({
+                                ...current,
+                                generalAbilityId:
+                                  current.generalAbilityId === entry.id
+                                    ? ""
+                                    : entry.id,
+                              }))
+                            }
+                            disabled={!available || ordersLocked}
+                            aria-pressed={plan.generalAbilityId === entry.id}
+                            title={entry.description}
+                          >
+                            <span aria-hidden="true">{entry.icon}</span>
+                            <strong>{entry.name}</strong>
+                            <small>{entry.short}</small>
+                            <em>{status}</em>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="general-tool-group">
+                    <small>Quick items · one per clash</small>
+                    <div className="battle-item-grid">
+                      {Object.values(BATTLE_ITEMS).map((entry) => (
                         <button
                           key={entry.id}
-                          className={`general-power ${plan.generalAbilityId === entry.id ? "is-selected" : ""}`}
+                          className={`battle-item ${plan.itemId === entry.id ? "is-selected" : ""}`}
                           onClick={() =>
                             setPlan((current) => ({
                               ...current,
-                              generalAbilityId:
-                                current.generalAbilityId === entry.id
-                                  ? ""
-                                  : entry.id,
+                              itemId:
+                                current.itemId === entry.id ? "" : entry.id,
                             }))
                           }
-                          disabled={!available || ordersLocked}
-                          aria-pressed={plan.generalAbilityId === entry.id}
-                          title={entry.description}
+                          disabled={
+                            (combat.items[entry.id] ?? 0) <= 0 || ordersLocked
+                          }
+                          aria-pressed={plan.itemId === entry.id}
+                          title={`${entry.name}: ${entry.short}`}
                         >
                           <span aria-hidden="true">{entry.icon}</span>
                           <strong>{entry.name}</strong>
                           <small>{entry.short}</small>
-                          <em>{status}</em>
+                          <b>×{combat.items[entry.id] ?? 0}</b>
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <div className="general-tool-group">
-                  <small>Quick items · one per clash</small>
-                  <div className="battle-item-grid">
-                    {Object.values(BATTLE_ITEMS).map((entry) => (
-                      <button
-                        key={entry.id}
-                        className={`battle-item ${plan.itemId === entry.id ? "is-selected" : ""}`}
-                        onClick={() =>
-                          setPlan((current) => ({
-                            ...current,
-                            itemId: current.itemId === entry.id ? "" : entry.id,
-                          }))
-                        }
-                        disabled={
-                          (combat.items[entry.id] ?? 0) <= 0 || ordersLocked
-                        }
-                        aria-pressed={plan.itemId === entry.id}
-                        title={`${entry.name}: ${entry.short}`}
-                      >
-                        <span aria-hidden="true">{entry.icon}</span>
-                        <strong>{entry.name}</strong>
-                        <small>{entry.short}</small>
-                        <b>×{combat.items[entry.id] ?? 0}</b>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  className={`support-weapon ${plan.useSupportWeapon ? "is-selected" : ""}`}
-                  onClick={() =>
-                    setPlan((current) => ({
-                      ...current,
-                      useSupportWeapon: !current.useSupportWeapon,
-                    }))
-                  }
-                  disabled={!combat.supportWeaponReady || ordersLocked}
-                  aria-pressed={plan.useSupportWeapon}
-                >
-                  <span aria-hidden="true">{SUPPORT_WEAPON.icon}</span>
-                  <span>
-                    <small>
-                      Support weapon ·{" "}
-                      {combat.supportWeaponReady ? "Ready" : "Spent"}
-                    </small>
-                    <strong>{SUPPORT_WEAPON.name}</strong>
-                    <em>{SUPPORT_WEAPON.short}</em>
-                  </span>
-                </button>
-              </aside>
+                  <button
+                    className={`support-weapon ${plan.useSupportWeapon ? "is-selected" : ""}`}
+                    onClick={() =>
+                      setPlan((current) => ({
+                        ...current,
+                        useSupportWeapon: !current.useSupportWeapon,
+                      }))
+                    }
+                    disabled={!combat.supportWeaponReady || ordersLocked}
+                    aria-pressed={plan.useSupportWeapon}
+                  >
+                    <span aria-hidden="true">{SUPPORT_WEAPON.icon}</span>
+                    <span>
+                      <small>
+                        Support weapon ·{" "}
+                        {combat.supportWeaponReady ? "Ready" : "Spent"}
+                      </small>
+                      <strong>{SUPPORT_WEAPON.name}</strong>
+                      <em>{SUPPORT_WEAPON.short}</em>
+                    </span>
+                  </button>
+                </aside>
 
-              <div className="battle-side allied-line">
-                <p className="combat-kicker">Your line · choose lead</p>
-                {combat.heroes.map((hero, index) => {
-                  const threatened = forecast?.targetIds.includes(hero.id);
-                  const isSupporting = plan.assistId === hero.id;
-                  return (
+                <div className="battle-side allied-line">
+                  <p className="combat-kicker">Your line · choose lead</p>
+                  {combat.heroes.map((hero, index) => {
+                    const threatened = forecast?.targetIds.includes(hero.id);
+                    const isSupporting = plan.assistId === hero.id;
+                    return (
+                      <button
+                        key={hero.id}
+                        className={`battle-unit is-ally ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${lastImpact?.actorId === hero.id && phase === "resolving" && resolutionStep >= 2 && resolutionStep <= 3 ? "is-striking" : ""} ${isSupporting && phase === "resolving" && resolutionStep === 1 ? "is-supporting" : ""} ${threatened && phase === "resolving" && resolutionStep === 4 ? "is-taking-hit" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
+                        onClick={() => hero.hp > 0 && selectLead(hero)}
+                        disabled={hero.hp <= 0 || ordersLocked}
+                      >
+                        <span className="lane-number">{index + 1}</span>
+                        <span className="unit-sigil">
+                          {hero.name.slice(0, 1)}
+                        </span>
+                        <span className="unit-copy">
+                          <strong>{hero.name}</strong>
+                          <small>
+                            {hero.role}
+                            {threatened ? " · threatened" : ""}
+                          </small>
+                          <span className="army-badge">
+                            {ARMY_TYPES[hero.armyId]?.icon}{" "}
+                            {ARMY_TYPES[hero.armyId]?.name}
+                          </span>
+                          <HealthBar value={hero.hp} max={hero.maxHp} />
+                        </span>
+                        <span className="hp-copy">{hero.hp}</span>
+                        {plan.leadId === hero.id && (
+                          <span className="unit-tag">Lead {index + 1}</span>
+                        )}
+                        {phase === "resolving" &&
+                          resolutionStep === 1 &&
+                          isSupporting && (
+                            <span className="floating-number is-support">
+                              Support
+                            </span>
+                          )}
+                        {phase === "resolving" &&
+                          resolutionStep === 4 &&
+                          threatened && (
+                            <span className="floating-number is-damage">
+                              -{lastImpact?.incoming}
+                            </span>
+                          )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="battle-side rival-line">
+                  <p className="combat-kicker">Rival line · choose target</p>
+                  {combat.enemies.map((enemy, index) => (
                     <button
-                      key={hero.id}
-                      className={`battle-unit is-ally ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${lastImpact?.actorId === hero.id && phase === "resolving" && resolutionStep >= 2 && resolutionStep <= 3 ? "is-striking" : ""} ${isSupporting && phase === "resolving" && resolutionStep === 1 ? "is-supporting" : ""} ${threatened && phase === "resolving" && resolutionStep === 4 ? "is-taking-hit" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
-                      onClick={() => hero.hp > 0 && selectLead(hero)}
-                      disabled={hero.hp <= 0 || ordersLocked}
+                      key={enemy.id}
+                      className={`battle-unit is-rival ${plan.targetId === enemy.id ? "is-selected" : ""} ${forecast?.actorName === enemy.name ? "is-acting" : ""} ${lastImpact?.targetId === enemy.id && phase === "resolving" && resolutionStep >= 2 && resolutionStep <= 3 ? "is-hit" : ""} ${forecast?.actorName === enemy.name && phase === "resolving" && resolutionStep === 4 ? "is-retaliating" : ""} ${hpClass(enemy.hp, enemy.maxHp)}`}
+                      onClick={() =>
+                        enemy.hp > 0 &&
+                        setPlan((current) => ({
+                          ...current,
+                          targetId: enemy.id,
+                        }))
+                      }
+                      disabled={enemy.hp <= 0 || ordersLocked}
                     >
                       <span className="lane-number">{index + 1}</span>
                       <span className="unit-sigil">
-                        {hero.name.slice(0, 1)}
+                        {enemy.name.slice(0, 1)}
                       </span>
                       <span className="unit-copy">
-                        <strong>{hero.name}</strong>
+                        <strong>{enemy.name}</strong>
                         <small>
-                          {hero.role}
-                          {threatened ? " · threatened" : ""}
+                          {enemy.role}
+                          {forecast?.actorName === enemy.name
+                            ? " · acting"
+                            : ""}
                         </small>
-                        <span className="army-badge">
-                          {ARMY_TYPES[hero.armyId]?.icon}{" "}
-                          {ARMY_TYPES[hero.armyId]?.name}
-                        </span>
-                        <HealthBar value={hero.hp} max={hero.maxHp} />
+                        <HealthBar value={enemy.hp} max={enemy.maxHp} hostile />
                       </span>
-                      <span className="hp-copy">{hero.hp}</span>
-                      {plan.leadId === hero.id && (
-                        <span className="unit-tag">Lead {index + 1}</span>
+                      <span className="hp-copy">{enemy.hp}</span>
+                      {plan.targetId === enemy.id && (
+                        <span className="unit-tag">Target</span>
                       )}
-                      {phase === "resolving" &&
-                        resolutionStep === 1 &&
-                        isSupporting && (
-                          <span className="floating-number is-support">
-                            Support
+                      {lastImpact?.targetId === enemy.id &&
+                        phase === "resolving" &&
+                        resolutionStep === 2 && (
+                          <span className="floating-number is-ability">
+                            Ability
                           </span>
                         )}
-                      {phase === "resolving" &&
-                        resolutionStep === 4 &&
-                        threatened && (
-                          <span className="floating-number is-damage">
-                            -{lastImpact?.incoming}
+                      {lastImpact?.targetId === enemy.id &&
+                        phase === "resolving" &&
+                        resolutionStep === 3 && (
+                          <span className="floating-number is-strike">
+                            -{lastImpact?.outgoing}
                           </span>
                         )}
                     </button>
-                  );
-                })}
-              </div>
-
-              <div className="battle-side rival-line">
-                <p className="combat-kicker">Rival line · choose target</p>
-                {combat.enemies.map((enemy, index) => (
-                  <button
-                    key={enemy.id}
-                    className={`battle-unit is-rival ${plan.targetId === enemy.id ? "is-selected" : ""} ${forecast?.actorName === enemy.name ? "is-acting" : ""} ${lastImpact?.targetId === enemy.id && phase === "resolving" && resolutionStep >= 2 && resolutionStep <= 3 ? "is-hit" : ""} ${forecast?.actorName === enemy.name && phase === "resolving" && resolutionStep === 4 ? "is-retaliating" : ""} ${hpClass(enemy.hp, enemy.maxHp)}`}
-                    onClick={() =>
-                      enemy.hp > 0 &&
-                      setPlan((current) => ({ ...current, targetId: enemy.id }))
-                    }
-                    disabled={enemy.hp <= 0 || ordersLocked}
-                  >
-                    <span className="lane-number">{index + 1}</span>
-                    <span className="unit-sigil">{enemy.name.slice(0, 1)}</span>
-                    <span className="unit-copy">
-                      <strong>{enemy.name}</strong>
-                      <small>
-                        {enemy.role}
-                        {forecast?.actorName === enemy.name ? " · acting" : ""}
-                      </small>
-                      <HealthBar value={enemy.hp} max={enemy.maxHp} hostile />
-                    </span>
-                    <span className="hp-copy">{enemy.hp}</span>
-                    {plan.targetId === enemy.id && (
-                      <span className="unit-tag">Target</span>
-                    )}
-                    {lastImpact?.targetId === enemy.id &&
-                      phase === "resolving" &&
-                      resolutionStep === 2 && (
-                        <span className="floating-number is-ability">
-                          Ability
-                        </span>
-                      )}
-                    {lastImpact?.targetId === enemy.id &&
-                      phase === "resolving" &&
-                      resolutionStep === 3 && (
-                        <span className="floating-number is-strike">
-                          -{lastImpact?.outgoing}
-                        </span>
-                      )}
-                  </button>
-                ))}
-              </div>
-            </section>
+                  ))}
+                </div>
+              </section>
             )}
 
             <CinematicBattlefield
@@ -1102,12 +1235,6 @@ export function App() {
               ordersLocked={ordersLocked}
               viewMode={viewMode}
               setViewMode={setViewMode}
-              allyGeneralOpen={allyGeneralOpen}
-              setAllyGeneralOpen={setAllyGeneralOpen}
-              enemyGeneralOpen={enemyGeneralOpen}
-              setEnemyGeneralOpen={setEnemyGeneralOpen}
-              powerDrawerOpen={powerDrawerOpen}
-              setPowerDrawerOpen={setPowerDrawerOpen}
               selectLead={selectLead}
             />
 
@@ -1116,19 +1243,38 @@ export function App() {
               aria-label="Combat plan controls"
             >
               <div className="command-progress" aria-label="Command sequence">
-                {COMMAND_STEPS.map((step, index) => (
-                  <button
-                    key={step.id}
-                    className={`${commandStep === index ? "is-current" : ""} ${commandSummaries[index] !== "Choose" ? "is-complete" : ""}`}
-                    onClick={() => setCommandStep(index)}
-                    disabled={ordersLocked}
-                    aria-current={commandStep === index ? "step" : undefined}
-                  >
-                    <span>{index + 1}</span>
-                    <small>{step.label}</small>
-                    <strong>{commandSummaries[index]}</strong>
-                  </button>
-                ))}
+                {COMMAND_STEPS.map((step, index) => {
+                  const StepIcon = step.Icon;
+                  const complete = commandStatuses[index];
+                  return (
+                    <button
+                      key={step.id}
+                      className={`${commandStep === index ? "is-current" : ""} ${complete ? "is-complete" : "is-incomplete"}`}
+                      onClick={() => setCommandStep(index)}
+                      disabled={ordersLocked}
+                      aria-current={commandStep === index ? "step" : undefined}
+                      aria-label={`${index + 1}. ${step.label}, ${step.required ? "required, " : ""}${complete ? "complete" : "incomplete"}: ${commandSummaries[index]}`}
+                    >
+                      <span className="command-step-icon">
+                        <StepIcon aria-hidden="true" />
+                      </span>
+                      <span className="command-step-copy">
+                        <small>
+                          {index + 1}. {step.label}
+                        </small>
+                        <strong>{commandSummaries[index]}</strong>
+                      </span>
+                      <span className="command-step-status">
+                        {complete ? (
+                          <Check aria-hidden="true" />
+                        ) : (
+                          <CircleDashed aria-hidden="true" />
+                        )}
+                        <small>{complete ? "Complete" : "Required"}</small>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div
@@ -1343,7 +1489,7 @@ export function App() {
                   }
                   disabled={commandStep === 0 || ordersLocked}
                 >
-                  Back
+                  <ArrowLeft aria-hidden="true" /> Back
                 </button>
                 <span>
                   <small>
@@ -1361,7 +1507,7 @@ export function App() {
                     }
                     disabled={ordersLocked}
                   >
-                    Next
+                    Next <ArrowRight aria-hidden="true" />
                   </button>
                 ) : (
                   <button
@@ -1369,7 +1515,7 @@ export function App() {
                     onClick={() => commitCombat()}
                     disabled={Boolean(planError) || ordersLocked}
                   >
-                    Commit attack
+                    <Swords aria-hidden="true" /> Commit attack
                   </button>
                 )}
               </div>
