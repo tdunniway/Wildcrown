@@ -69,6 +69,7 @@
 }
 
 .battlefield-board {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.88fr) minmax(0, 1fr);
   gap: 1.2%;
@@ -3397,7 +3398,7 @@ button:focus-visible {
 
 .authority-select select {
   width: 100%;
-  min-height: 1.7rem;
+  min-height: var(--tap-target);
   border: 0;
   background: transparent;
   color: #f3d588;
@@ -3984,5 +3985,1085 @@ button:focus-visible {
   .army-assignments select {
     min-height: 3rem;
     font-size: 1rem;
+  }
+}
+
+/* Battlefield Command v4: compact decisions, spatial reads, and paced clashes. */
+.command-progress,
+.command-dock-actions,
+.general-tools-toggle {
+  display: none;
+}
+
+.lane-number {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.3rem;
+  min-width: 1rem;
+  color: rgb(221 198 138 / 72%);
+  font: 600 0.65rem/1 Cinzel, Georgia, serif;
+}
+
+.battle-map {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border: 1px solid rgb(217 169 76 / 36%);
+  background: rgb(2 13 19 / 78%);
+}
+
+.battle-map-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem;
+  color: #d8c180;
+  text-align: left;
+}
+
+.battle-map-heading small,
+.battle-map-heading strong {
+  font-size: 0.7rem;
+}
+
+.battle-map-heading small {
+  color: #84b8bd;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.formation-read {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+
+.formation-read span {
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid rgb(74 150 157 / 25%);
+  background: rgb(8 37 44 / 72%);
+  text-align: left;
+}
+
+.formation-read small,
+.formation-read strong {
+  display: block;
+  font-size: 0.64rem;
+  line-height: 1.25;
+}
+
+.formation-read small {
+  color: #82adb1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.formation-read strong {
+  margin-top: 0.15rem;
+  color: #f2dda0;
+}
+
+.battle-map-lane {
+  min-height: 2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(4.2rem, 0.82fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.3rem;
+  border-block: 1px solid rgb(91 146 151 / 15%);
+}
+
+.map-unit {
+  min-width: 0;
+  padding: 0.3rem 0.36rem;
+  border: 1px solid rgb(76 177 188 / 38%);
+  background: rgb(10 50 59 / 82%);
+  color: #dff6ef;
+  font-size: 0.68rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-unit.is-hostile {
+  border-color: rgb(190 79 66 / 42%);
+  background: rgb(66 22 23 / 78%);
+  color: #ffd0bc;
+}
+
+.range-band {
+  display: grid;
+  min-width: 0;
+  color: #8cb6ba;
+  text-align: center;
+}
+
+.range-band small,
+.range-band strong {
+  font-size: 0.58rem;
+  line-height: 1.2;
+}
+
+.battle-map-lane.is-lead .map-unit.is-friendly,
+.battle-map-lane.is-target .map-unit.is-hostile {
+  border-color: #f1cb6d;
+  box-shadow: 0 0 0.7rem rgb(223 177 71 / 20%);
+}
+
+.battle-map-lane.is-threatened .range-band {
+  color: #f39883;
+}
+
+.round-objective {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 0.8fr) minmax(0, 1.25fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem;
+  border: 1px solid rgb(210 163 67 / 38%);
+  border-left-width: 3px;
+  background: rgb(8 27 34 / 88%);
+  text-align: left;
+}
+
+.round-objective > span,
+.round-objective > b {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.round-objective small {
+  color: #8bbcc0;
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.round-objective strong {
+  color: #f1d88e;
+  font: 600 0.78rem/1.2 Cinzel, Georgia, serif;
+}
+
+.round-objective p {
+  margin: 0;
+  color: #c6d6d5;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.round-objective b {
+  min-width: 5.5rem;
+  color: #ff9f87;
+  font-size: 0.68rem;
+  text-align: right;
+}
+
+.round-objective b em {
+  color: #9fb6b7;
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.round-objective.is-secured {
+  border-left-color: #45d5cf;
+}
+
+.round-objective.is-secured b {
+  color: #84efdc;
+}
+
+/* Keep tactical explanations in the information flow so they never cover the
+   objective, rival intent, or predicted exchange on shorter desktop screens. */
+.clash-core .ai-insight {
+  position: static;
+  inset: auto;
+  margin-top: 0;
+  padding: 0.65rem;
+}
+
+.clash-core .ai-insight small,
+.clash-core .ai-insight p {
+  font-size: 0.72rem;
+}
+
+.battle-map-heading small,
+.battle-map-heading strong,
+.formation-read small,
+.formation-read strong,
+.map-unit {
+  font-size: 0.75rem;
+}
+
+.range-band small,
+.range-band strong {
+  font-size: 0.64rem;
+}
+
+.combat-vfx {
+  position: absolute;
+  z-index: 24;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.combat-vfx strong {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  padding: 0.4rem 0.7rem;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(241 203 109 / 72%);
+  background: rgb(2 14 20 / 90%);
+  color: #ffe7a0;
+  font: 700 clamp(0.72rem, 1.2vw, 1.05rem)/1 Cinzel, Georgia, serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: 0 0 1.2rem rgb(90 230 231 / 22%);
+  animation: combat-beat-title 680ms ease both;
+}
+
+.combat-vfx-wash,
+.combat-vfx-line,
+.combat-vfx-impact {
+  position: absolute;
+  display: block;
+}
+
+.combat-vfx-wash {
+  inset: 0;
+  background: rgb(54 211 213 / 8%);
+  animation: combat-beat-wash 720ms ease both;
+}
+
+.combat-vfx-line {
+  top: 50%;
+  left: 18%;
+  width: 64%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #8ff8ef, #ffe79b, #ff7a65, transparent);
+  box-shadow: 0 0 1.25rem #75eef0;
+  transform-origin: left center;
+  animation: combat-beat-line 720ms ease both;
+}
+
+.combat-vfx-impact {
+  top: 50%;
+  left: 72%;
+  width: 4rem;
+  height: 4rem;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgb(255 205 111 / 70%);
+  border-radius: 50%;
+  box-shadow: 0 0 2rem rgb(255 106 79 / 72%);
+  animation: combat-beat-impact 720ms ease both;
+}
+
+.resolution-beat-0 .combat-vfx-line,
+.resolution-beat-0 .combat-vfx-impact,
+.resolution-beat-1 .combat-vfx-line,
+.resolution-beat-1 .combat-vfx-impact {
+  opacity: 0;
+}
+
+.resolution-beat-1 .combat-vfx-wash {
+  background: rgb(54 211 213 / 15%);
+}
+
+.resolution-beat-4 .combat-vfx-line {
+  transform-origin: right center;
+  animation-direction: reverse;
+}
+
+.resolution-beat-4 .combat-vfx-impact {
+  left: 28%;
+  border-color: rgb(255 113 91 / 76%);
+}
+
+.battlefield-board.is-paused .combat-vfx * {
+  animation-play-state: paused;
+}
+
+.battle-unit.is-supporting {
+  border-color: #62e3dd;
+  box-shadow: 0 0 1.2rem rgb(65 222 216 / 40%);
+  animation: support-pulse 720ms ease both;
+}
+
+.battle-unit.is-taking-hit,
+.battle-unit.is-rival.is-hit {
+  animation: unit-impact 620ms ease both;
+}
+
+.battle-unit.is-retaliating {
+  z-index: 3;
+  border-color: #ff7e66;
+  box-shadow: 0 0 1.2rem rgb(255 82 59 / 45%);
+  animation: rival-strike 680ms ease both;
+}
+
+.floating-number.is-support,
+.floating-number.is-ability {
+  font-size: clamp(0.58rem, 0.9vw, 0.92rem);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.floating-number.is-support {
+  color: #8df4df;
+}
+
+.floating-number.is-ability {
+  color: #ffe391;
+}
+
+.battle-map.is-direct .battle-map-lane.is-lead .map-unit.is-friendly,
+.battle-map.is-flank .battle-map-lane.is-lead .map-unit.is-friendly {
+  transform: translateX(0.32rem);
+}
+
+.battle-map.is-ranged .battle-map-lane.is-lead .map-unit.is-friendly {
+  transform: translateX(-0.2rem);
+}
+
+.battle-map.is-shield .battle-map-lane.is-lead .map-unit.is-friendly {
+  border-width: 2px;
+}
+
+.resolution-stage,
+.round-debrief {
+  position: absolute;
+  z-index: 60;
+  top: 50%;
+  left: 50%;
+  width: min(38rem, calc(100% - 2rem));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgb(224 180 79 / 68%);
+  background:
+    radial-gradient(circle at 50% 0%, rgb(31 115 123 / 28%), transparent 48%),
+    rgb(3 17 24 / 97%);
+  box-shadow: 0 1.5rem 5rem rgb(0 0 0 / 78%);
+}
+
+.resolution-stage {
+  padding: 1.25rem;
+}
+
+.resolution-heading {
+  display: grid;
+  grid-template-columns: minmax(9rem, 0.72fr) minmax(0, 1.28fr);
+  align-items: end;
+  gap: 1rem;
+}
+
+.resolution-heading span,
+.resolution-heading strong,
+.resolution-heading small {
+  display: block;
+}
+
+.resolution-heading small,
+.round-debrief small {
+  color: #82cad0;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.resolution-heading strong,
+.round-debrief h2 {
+  margin: 0.2rem 0 0;
+  color: #f1d588;
+  font: 600 1.5rem/1.1 Cinzel, Georgia, serif;
+}
+
+.resolution-heading p,
+.round-debrief p {
+  margin: 0;
+  color: #d2e1df;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.resolution-callout {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.9rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgb(87 207 210 / 42%);
+  border-left: 3px solid #5bdde0;
+  background: rgb(9 45 53 / 66%);
+}
+
+.resolution-callout small {
+  color: #8bd7d7;
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.resolution-callout strong {
+  color: #fff0b8;
+  font: 600 1.05rem/1.2 Cinzel, Georgia, serif;
+}
+
+.resolution-callout p {
+  margin: 0;
+  color: #bfd1cf;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.resolution-stage.beat-4 .resolution-callout {
+  border-color: rgb(224 102 78 / 56%);
+  border-left-color: #f27661;
+  background: rgb(67 21 22 / 56%);
+}
+
+.resolution-timeline {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  margin: 1rem 0;
+}
+
+.resolution-timeline span {
+  min-height: 2.25rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(92 128 132 / 48%);
+  color: #7e9ea1;
+  font-weight: 700;
+}
+
+.resolution-timeline span.is-current {
+  border-color: #f0c65f;
+  background: rgb(110 77 17 / 35%);
+  color: #ffdf85;
+}
+
+.resolution-timeline span.is-complete {
+  border-color: #3ab7c5;
+  background: rgb(20 102 111 / 28%);
+  color: #b8fbfb;
+}
+
+.resolution-inspect,
+.debrief-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.resolution-inspect span,
+.debrief-metrics span {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem;
+  border: 1px solid rgb(91 146 151 / 34%);
+  background: rgb(8 34 41 / 70%);
+  text-align: center;
+}
+
+.resolution-inspect small,
+.debrief-metrics small {
+  color: #8fb2b5;
+  font-size: 0.7rem;
+}
+
+.resolution-inspect strong,
+.debrief-metrics strong {
+  color: #f2d785;
+  font: 600 1.15rem/1 Cinzel, Georgia, serif;
+}
+
+.resolution-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.resolution-actions button,
+.continue-command {
+  min-height: 2.75rem;
+  padding: 0.65rem 1rem;
+  border: 1px solid #c99b3d;
+  background: #132d34;
+  color: #f2dda5;
+  cursor: pointer;
+}
+
+.round-debrief {
+  padding: 1.35rem;
+}
+
+.debrief-grade {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgb(217 169 76 / 28%);
+}
+
+.debrief-grade p {
+  margin-top: 0.55rem;
+}
+
+.debrief-learning {
+  margin: 0.9rem 0;
+  padding: 0.85rem;
+  border-left: 3px solid #3fc2cc;
+  background: rgb(15 69 75 / 24%);
+}
+
+.debrief-learning strong {
+  display: block;
+  margin: 0.3rem 0;
+  color: #eff0d2;
+  font-size: 0.95rem;
+}
+
+.debrief-learning p {
+  font-size: 0.82rem;
+}
+
+.objective-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  align-items: center;
+  margin: 0.9rem 0;
+  padding: 0.8rem;
+  border: 1px solid rgb(82 203 197 / 46%);
+  border-left: 3px solid #57d7cf;
+  background: rgb(11 57 61 / 46%);
+}
+
+.objective-result span {
+  grid-row: 1 / 3;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.objective-result strong {
+  color: #8cf3dc;
+  font: 700 1rem/1 Cinzel, Georgia, serif;
+}
+
+.objective-result p {
+  color: #f3e2b1;
+  font-weight: 700;
+}
+
+.objective-result em {
+  color: #aac3c2;
+  font-size: 0.76rem;
+  font-style: normal;
+}
+
+.objective-result.is-missed {
+  border-color: rgb(222 111 87 / 50%);
+  border-left-color: #e87760;
+  background: rgb(69 25 25 / 42%);
+}
+
+.objective-result.is-missed strong {
+  color: #ff9a84;
+}
+
+.continue-command {
+  width: 100%;
+  background: linear-gradient(180deg, #9e7024, #5b3b0c);
+  color: #fff1be;
+  font-family: Cinzel, Georgia, serif;
+  font-weight: 700;
+}
+
+.phase-debrief .bottom-nav {
+  visibility: hidden;
+}
+
+@keyframes combat-beat-title {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -38%) scale(0.92);
+  }
+  24%,
+  74% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -60%) scale(1.03);
+  }
+}
+
+@keyframes combat-beat-wash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  34% {
+    opacity: 1;
+  }
+}
+
+@keyframes combat-beat-line {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+  34% {
+    opacity: 1;
+  }
+  72%,
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+
+@keyframes combat-beat-impact {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  38% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.7);
+  }
+}
+
+@keyframes support-pulse {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  42% {
+    transform: translateX(2%);
+    filter: brightness(1.32);
+  }
+}
+
+@keyframes unit-impact {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  24% {
+    transform: translateX(-3%);
+    filter: brightness(1.5);
+  }
+  48% {
+    transform: translateX(2%);
+  }
+}
+
+@keyframes rival-strike {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  42% {
+    transform: translateX(-4%);
+    filter: brightness(1.32);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combat-vfx *,
+  .battle-unit.is-supporting,
+  .battle-unit.is-taking-hit,
+  .battle-unit.is-rival.is-hit,
+  .battle-unit.is-retaliating {
+    animation-duration: 1ms !important;
+  }
+}
+
+@media (min-width: 761px) and (min-aspect-ratio: 1 / 1) {
+  .battle-map {
+    margin-bottom: 0.1rem;
+  }
+
+  .battle-map-lane {
+    grid-template-columns: minmax(0, 1fr) minmax(3.4rem, 0.7fr) minmax(0, 1fr);
+  }
+
+  .clash-core {
+    overflow: auto;
+    justify-content: flex-start;
+    gap: 0.45rem;
+  }
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
+  body .combat-header {
+    grid-template-columns: minmax(4.25rem, 0.48fr) minmax(4.25rem, 0.48fr) minmax(0, 1.25fr);
+    grid-template-areas:
+      "round crown energy"
+      "intent intent intent"
+      "actions actions actions";
+    height: auto;
+  }
+
+  body .combat-header .round-chip {
+    grid-area: round;
+  }
+
+  body .combat-header .momentum-chip {
+    grid-area: crown;
+  }
+
+  body .combat-header .energy-chip {
+    grid-area: energy;
+    grid-column: auto;
+  }
+
+  body .combat-header .intent-card {
+    grid-area: intent;
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    min-height: 5.25rem;
+    padding: 0.55rem 0.65rem;
+  }
+
+  body .combat-header .intent-card > span:nth-child(2) {
+    min-width: 0;
+  }
+
+  body .combat-header .intent-target {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  body .combat-header .battle-status-actions {
+    grid-area: actions;
+    grid-column: 1 / -1;
+    grid-row: 3;
+    grid-template-columns: minmax(0, 1.1fr) minmax(4.5rem, 0.72fr) minmax(5.75rem, 1.05fr);
+  }
+
+  body .combat-header .authority-select {
+    padding: 0.35rem 0.5rem;
+  }
+
+  body .combat-header .authority-select span {
+    display: none;
+  }
+
+  body .combat-header .authority-select select {
+    min-height: 2.75rem;
+    font-size: 0.9rem;
+  }
+
+  body .arena-frame {
+    padding-bottom: 25rem;
+  }
+
+  body .combat-header {
+    position: sticky;
+    z-index: 35;
+    top: 0;
+    padding: 0.65rem;
+    background: rgb(3 14 21 / 97%);
+    box-shadow: 0 0.75rem 1.5rem rgb(0 0 0 / 45%);
+  }
+
+  .authority-select,
+  .header-surge,
+  .header-commit {
+    min-height: 3.5rem;
+  }
+
+  .authority-select select {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+
+  .general-panel .general-tool-group,
+  .general-panel > .support-weapon {
+    display: none;
+  }
+
+  .general-panel.is-open .general-tool-group,
+  .general-panel.is-open > .support-weapon {
+    display: block;
+  }
+
+  .general-tools-toggle {
+    min-height: 3.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding: 0.7rem;
+    border: 1px solid rgb(217 169 76 / 42%);
+    background: rgb(11 42 50 / 84%);
+    color: #eedaa5;
+    text-align: left;
+  }
+
+  .general-tools-toggle strong {
+    color: #74dce0;
+  }
+
+  .battle-map {
+    order: -1;
+  }
+
+  .battle-map-heading small,
+  .battle-map-heading strong,
+  .map-unit {
+    font-size: 0.75rem;
+  }
+
+  .range-band small,
+  .range-band strong {
+    font-size: 0.68rem;
+  }
+
+  .formation-read small,
+  .formation-read strong {
+    font-size: 0.72rem;
+  }
+
+  .round-objective {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    padding: 0.7rem;
+  }
+
+  .round-objective p {
+    grid-column: 1 / -1;
+    font-size: 0.78rem;
+  }
+
+  .round-objective small,
+  .round-objective b {
+    font-size: 0.72rem;
+  }
+
+  .round-objective strong {
+    font-size: 0.84rem;
+  }
+
+  body .command-deck {
+    position: fixed;
+    z-index: 45;
+    right: 0;
+    bottom: calc(3.45rem + env(safe-area-inset-bottom));
+    left: 0;
+    width: 100%;
+    height: auto;
+    max-height: min(25rem, 58vh);
+    display: block;
+    overflow-y: auto;
+    padding: 0.6rem;
+    border-top: 1px solid #d1a246;
+    background: rgb(3 17 24 / 98%);
+    box-shadow: 0 -1rem 2.5rem rgb(0 0 0 / 58%);
+  }
+
+  .command-progress {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.3rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .command-progress button {
+    min-width: 0;
+    min-height: 3.25rem;
+    display: grid;
+    grid-template-columns: 1.2rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.35rem;
+    border: 1px solid rgb(75 112 117 / 48%);
+    background: #071d25;
+    color: #b6c7c5;
+    text-align: left;
+  }
+
+  .command-progress button > span {
+    grid-row: 1 / 3;
+    display: grid;
+    width: 1.2rem;
+    height: 1.2rem;
+    place-items: center;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.7rem;
+  }
+
+  .command-progress small {
+    font-size: 0.66rem;
+  }
+
+  .command-progress strong {
+    display: block;
+    min-width: 0;
+    color: #e8d7a7;
+    font-size: 0.68rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .command-progress button.is-current {
+    border-color: #f0c35c;
+    background: rgb(92 64 15 / 55%);
+    color: #ffe39a;
+  }
+
+  body .command-column {
+    display: none;
+    padding: 0.65rem;
+  }
+
+  body .command-column.is-command-active {
+    display: block;
+  }
+
+  body .command-column .combat-kicker {
+    margin-bottom: 0.45rem;
+    font-size: 0.78rem;
+  }
+
+  body .strategy-grid,
+  body .movement-grid,
+  body .tactic-grid,
+  body .ability-grid,
+  body .assist-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+
+  body .strategy-card,
+  body .movement-card,
+  body .tactic-card,
+  body .ability-card,
+  body .assist-card {
+    min-height: 4rem;
+    padding: 0.6rem;
+  }
+
+  body .tactic-card {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .strategy-card.is-selected::after,
+  .movement-card.is-selected::after,
+  .tactic-card.is-selected::after,
+  .ability-card.is-selected::after,
+  .assist-card.is-selected::after {
+    content: "Selected";
+    display: block;
+    color: #76e6e3;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .command-dock-actions {
+    display: grid;
+    grid-template-columns: minmax(4.5rem, 0.7fr) minmax(0, 1fr) minmax(5.5rem, 0.9fr);
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+  }
+
+  .command-dock-actions button {
+    min-height: 3rem;
+    border: 1px solid rgb(217 169 76 / 58%);
+    background: #102b33;
+    color: #f1dda6;
+    font-weight: 700;
+  }
+
+  .command-dock-actions button:disabled {
+    opacity: 0.42;
+  }
+
+  .command-dock-actions > span {
+    display: grid;
+    text-align: center;
+  }
+
+  .command-dock-actions small {
+    color: #85afb2;
+    font-size: 0.68rem;
+  }
+
+  .command-dock-actions strong {
+    color: #f3d687;
+    font-size: 0.82rem;
+  }
+
+  .command-dock-actions .command-dock-commit {
+    background: linear-gradient(180deg, #a97927, #5d3d0d);
+    color: #fff1be;
+  }
+
+  .phase-resolving .command-deck,
+  .phase-debrief .command-deck {
+    visibility: hidden;
+  }
+
+  .resolution-stage,
+  .round-debrief {
+    position: fixed;
+    z-index: 70;
+    top: 50%;
+    width: calc(100% - 1.2rem);
+    max-height: calc(100vh - 1.2rem);
+    overflow-y: auto;
+  }
+
+  .resolution-stage,
+  .round-debrief {
+    padding: 1rem;
+  }
+
+  .resolution-heading {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .resolution-heading strong,
+  .round-debrief h2 {
+    font-size: 1.3rem;
+  }
+
+  .resolution-heading p,
+  .round-debrief p,
+  .debrief-learning strong {
+    font-size: 0.9rem;
+  }
+
+  .resolution-actions button,
+  .continue-command {
+    min-height: 3rem;
+    font-size: 1rem;
+  }
+
+  .resolution-actions {
+    flex-wrap: wrap;
+  }
+
+  .resolution-actions button {
+    flex: 1 1 8rem;
+  }
+
+  .objective-result {
+    grid-template-columns: 1fr;
+  }
+
+  .objective-result span {
+    grid-row: auto;
   }
 }

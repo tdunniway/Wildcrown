@@ -82,3 +82,66 @@ Compared side by side at desktop landscape and a 500 × 900 narrow viewport on O
 - Browser flows checked: setup, Assisted recommendation, manual commit, Watch, Take Command, Auto Resolve, and results.
 - Browser console: no new warnings or errors after the Watch-mode fix.
 - Final status: **Pass**.
+
+## Battlefield Command vertical slice — October 11, 2026
+
+### Reference and implementation
+
+- Visual source: `public/assets/arena-war-table-reference.png` plus the previously approved Command Authority build documented above.
+- Implementation: `src/App.jsx` and `src/styles.css`.
+- Browser evidence: live Codex in-app browser captures at 1440 × 900 desktop and 430 × 932 phone viewports.
+- Primary interactions checked: enter arena, inspect intent, select all five command steps, change movement, commit, watch the five-beat clash, read the tactical debrief, continue to round two, and open the optional General tools drawer.
+
+### What was verified
+
+- Desktop keeps the General, allied line, spatial formation map, rival line, enemy intent, and five tactical choice groups visible in one battle composition.
+- Phone presents a fixed five-step command dock with Strategy → Movement → Response → Ability → Support, readable selections, Back/Next controls, and a final Commit action.
+- The selected movement changes the live formation preview and the outgoing/incoming forecast before commitment.
+- General powers, consumable items, and the support weapon remain optional on phone and expand on demand without blocking the core round loop.
+- Resolution is staged as Formation → Support → Ability → Army Strike → Retaliation and remains skippable.
+- Every non-final round pauses on a debrief that reports grade, damage dealt, damage taken, damage denied, the successful/failed counter, and the support interaction before the next intent appears.
+- Touch targets in the mobile command dock and modal actions are at least 44 CSS pixels tall; command controls use 16-pixel or larger interactive text where browser zoom behavior matters.
+- Browser console after the full mobile round flow: 0 warnings and 0 errors.
+
+### Automated verification
+
+- Production build: passed.
+- Combat engine: 10/10 tests passing.
+- Sites/static routing: 4/4 tests passing.
+- `git diff --check`: passed.
+
+### Final result
+
+**Passed.** No P0, P1, or P2 visual or interaction defects remain in the approved vertical slice.
+
+## Tactical feedback and pacing pass — October 11, 2026
+
+### Reference and states reviewed
+
+- Source visual: `public/assets/arena-war-table-reference.png` and the approved Battlefield Command vertical slice above.
+- Implementation: `src/App.jsx` and `src/styles.css`.
+- Viewports: 1440 × 900 desktop and 430 × 932 phone.
+- States inspected: setup, command planning, paused resolution, completed resolution, tactical debrief, round-two continuation, and mobile steps one and two.
+
+### Improvements verified
+
+- Each round now presents one legible tactical objective based on the current enemy intent, with a live likely-secured/at-risk forecast before commitment.
+- Movement choices communicate both payoff and exposure rather than only a damage modifier.
+- The five-beat resolution now includes named event callouts, battlefield hit/guard effects, pause/resume, 1×/2× pacing, inspect, and skip controls.
+- The debrief confirms whether the round objective was secured and provides a concrete coaching read for the next decision.
+- The former center-board advice overlap was removed; General advice, movement forecast, rival move, and round objective remain readable as separate layers.
+- The phone header uses three clear rows: resources, full-width rival intent, then Command Authority/Surge/Commit. Enemy intent is no longer truncated into a narrow center column.
+- Mobile step navigation advanced from Strategy to Movement correctly. Every visible mobile button/select measured at least 44 CSS pixels high and no visible interactive text measured below 12 CSS pixels.
+- The desktop Command Authority select now uses the same minimum tap/click height as other controls.
+
+### Verification
+
+- Production build: passed with Vite 8.3.4.
+- Combat engine: 10/10 tests passing.
+- Sites/static routing: 4/4 tests passing.
+- Browser console: 0 warnings and 0 errors.
+- No horizontal overflow or clipped header actions observed at 430 × 932.
+
+### Final result
+
+**Passed.**

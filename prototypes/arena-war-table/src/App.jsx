@@ -62,6 +62,90 @@ const reserveHeroes = [
   { name: "Rook", level: 56, armyId: "riders" },
 ];
 
+const COMMAND_STEPS = [
+  { id: "strategy", label: "Strategy" },
+  { id: "movement", label: "Movement" },
+  { id: "response", label: "Response" },
+  { id: "ability", label: "Ability" },
+  { id: "support", label: "Support" },
+];
+
+const RESOLUTION_BEATS = [
+  { label: "Formation", detail: "Armies take their ordered positions." },
+  { label: "Support", detail: "General powers and hero support fire." },
+  { label: "Ability", detail: "The lead hero commits their ability." },
+  { label: "Army strike", detail: "Your commanded army hits the target." },
+  { label: "Retaliation", detail: "The rival answers the exposed line." },
+];
+
+const MOVEMENT_READS = {
+  direct: {
+    headline: "Break the center",
+    payoff: "+6 strike",
+    risk: "No extra cover",
+  },
+  flank: {
+    headline: "Turn the exposed side",
+    payoff: "+10 strike",
+    risk: "+3 retaliation",
+  },
+  ranged: {
+    headline: "Control the approach",
+    payoff: "+4 strike · +4 cover",
+    risk: "Lower burst",
+  },
+  shield: {
+    headline: "Absorb the answer",
+    payoff: "+11 cover",
+    risk: "-4 strike",
+  },
+};
+
+function buildRoundObjective(forecast, preview) {
+  if (!forecast) return null;
+
+  if (forecast.exact) {
+    const complete = preview?.grade === "Hard counter";
+    return {
+      id: "counter",
+      title: "Break the rival read",
+      detail: `Answer ${forecast.headline} with ${forecast.counterLabel}.`,
+      target: "Hard counter",
+      predicted: complete,
+      progress: complete ? "Counter aligned" : "Counter not aligned",
+    };
+  }
+
+  if ((forecast.targetIds?.length ?? 0) > 1) {
+    const complete = (preview?.prevented ?? 0) >= 10;
+    return {
+      id: "deny",
+      title: "Hold the whole line",
+      detail: "Deny at least 10 damage from the incoming area attack.",
+      target: "10 damage denied",
+      predicted: complete,
+      progress: `${preview?.prevented ?? 0} projected`,
+    };
+  }
+
+  const margin = (preview?.outgoing ?? 0) - (preview?.incoming ?? 0);
+  return {
+    id: "trade",
+    title: "Win the exchange",
+    detail: "Deal at least 8 more damage than the rival retaliation.",
+    target: "+8 damage trade",
+    predicted: margin >= 8,
+    progress: `${margin >= 0 ? "+" : ""}${margin} projected`,
+  };
+}
+
+function evaluateObjective(objective, clash) {
+  if (!objective || !clash) return false;
+  if (objective.id === "counter") return clash.tacticMatched;
+  if (objective.id === "deny") return clash.damagePrevented >= 10;
+  return clash.damageDealt - clash.damageTaken >= 8;
+}
+
 function hpClass(hp, maxHp) {
   const ratio = hp / maxHp;
   return ratio <= 0.3 ? "is-critical" : ratio <= 0.6 ? "is-wounded" : "";
@@ -116,6 +200,14 @@ export function App() {
   const [commandStyle, setCommandStyle] = useState("balanced");
   const [aiInsight, setAiInsight] = useState("");
   const [decisionHistory, setDecisionHistory] = useState([]);
+  const [commandStep, setCommandStep] = useState(0);
+  const [powerDrawerOpen, setPowerDrawerOpen] = useState(false);
+  const [resolutionStep, setResolutionStep] = useState(0);
+  const [resolutionDetails, setResolutionDetails] = useState(false);
+  const [pendingResolution, setPendingResolution] = useState(null);
+  const [resolutionPaused, setResolutionPaused] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [lastObjective, setLastObjective] = useState(null);
 
   const available = useMemo(() => {
     const selectedNames = new Set(heroes.map((hero) => hero.name));
@@ -140,8 +232,74 @@ export function App() {
     () => (combat ? getCommandMastery(combat) : null),
     [combat],
   );
+  const tacticalObjective = useMemo(
+    () => buildRoundObjective(forecast, preview),
+    [forecast, preview],
+  );
   const ordersLocked =
-    phase === "resolving" || controlMode === "watch" || controlMode === "auto";
+    phase === "resolving" ||
+    phase === "debrief" ||
+    controlMode === "watch" ||
+    controlMode === "auto";
+
+  const commandSummaries = [
+    COMMAND_STYLES[commandStyle]?.name ?? "Choose",
+    MOVEMENT_STRATEGIES[plan?.movementId]?.name ?? "Choose",
+    TACTICS[plan?.tacticId]?.name ?? "Choose",
+    lead
+      ? HERO_LIBRARY[lead.name].abilities.find(
+          (entry) => entry.id === plan?.abilityId,
+        )?.name ?? "Choose"
+      : "Choose lead",
+    plan?.assistId === "brace"
+      ? "Brace"
+      : combat?.heroes.find((hero) => hero.id === plan?.assistId)?.name ??
+        "Choose",
+  ];
+
+  const selectedAbility = lead
+    ? HERO_LIBRARY[lead.name].abilities.find(
+        (entry) => entry.id === plan?.abilityId,
+      )
+    : null;
+  const selectedAssist = combat?.heroes.find(
+    (hero) => hero.id === plan?.assistId,
+  );
+  const movementRead = MOVEMENT_READS[plan?.movementId] ?? MOVEMENT_READS.direct;
+  const resolutionCallouts = [
+    {
+      eyebrow: MOVEMENT_STRATEGIES[plan?.movementId]?.name ?? "Formation",
+      title: movementRead.headline,
+      detail: `${movementRead.payoff} · ${movementRead.risk}`,
+    },
+    {
+      eyebrow: "Support committed",
+      title:
+        GENERAL_ABILITIES[plan?.generalAbilityId]?.name ??
+        selectedAssist?.name ??
+        "Defensive brace",
+      detail:
+        preview?.combo?.name ??
+        (plan?.useSupportWeapon
+          ? SUPPORT_WEAPON.name
+          : "The line reinforces the lead attack."),
+    },
+    {
+      eyebrow: lead?.name ?? "Lead hero",
+      title: selectedAbility?.name ?? "Hero ability",
+      detail: selectedAbility?.description ?? "The lead hero commits.",
+    },
+    {
+      eyebrow: ARMY_TYPES[lead?.armyId]?.name ?? "Commanded army",
+      title: `Strike ${combat?.enemies.find((enemy) => enemy.id === plan?.targetId)?.name ?? "the target"}`,
+      detail: `${preview?.outgoing ?? 0} projected total damage`,
+    },
+    {
+      eyebrow: forecast?.actorName ?? "Rival line",
+      title: forecast?.headline ?? "Retaliation",
+      detail: `${preview?.incoming ?? 0} damage reaches your line · ${preview?.prevented ?? 0} denied`,
+    },
+  ];
 
   function chooseHero(hero) {
     if (editingSlot === null) return;
@@ -186,6 +344,7 @@ export function App() {
         `${COMMAND_STYLES[commandStyle].name} found no legal order.`,
     );
     setPhase("result");
+    setPendingResolution(null);
     setToast(
       `${COMMAND_STYLES[commandStyle].name} resolved ${resolved.decisions.length} clashes`,
     );
@@ -198,6 +357,13 @@ export function App() {
     setPlan(getOpeningPlan(initial));
     setLastImpact(null);
     setDecisionHistory([]);
+    setCommandStep(0);
+    setPowerDrawerOpen(false);
+    setResolutionStep(0);
+    setResolutionDetails(false);
+    setPendingResolution(null);
+    setResolutionPaused(false);
+    setLastObjective(null);
     setAiInsight(
       controlMode === "command"
         ? "Full authority is yours. Read the signal and build the answer."
@@ -255,44 +421,104 @@ export function App() {
         outgoing: proposedPreview?.outgoing ?? 0,
         incoming: proposedPreview?.incoming ?? 0,
       });
+      setResolutionStep(0);
+      setResolutionDetails(false);
+      setResolutionPaused(false);
+      setPendingResolution({
+        state: combat,
+        plan: proposedPlan,
+        source,
+        explanation,
+        objective: tacticalObjective,
+      });
       setToast("Plans revealed — clash resolving");
-
-      window.setTimeout(() => {
-        const next = resolveRound(combat, proposedPlan);
-        setCombat(next);
-        if (source === "ai") {
-          setDecisionHistory((current) => [
-            ...current,
-            {
-              round: combat.round,
-              explanation:
-                explanation ||
-                `${COMMAND_STYLES[commandStyle].name} committed the order.`,
-              plan: proposedPlan,
-            },
-          ]);
-        }
-        if (next.outcome) {
-          setPhase("result");
-        } else {
-          const nextChoice = chooseCommandPlan(next, commandStyle);
-          setPlan(
-            controlMode === "command"
-              ? buildDefaultPlan(next)
-              : (nextChoice?.plan ?? buildDefaultPlan(next)),
-          );
-          setAiInsight(
-            controlMode === "command"
-              ? "Full authority is yours. Build the next answer."
-              : (nextChoice?.explanation ?? "No recommendation available."),
-          );
-          setPhase("battle");
-          setToast(`Round ${next.round} — new rival signals detected`);
-        }
-      }, 720);
     },
-    [combat, commandStyle, controlMode, phase, plan],
+    [combat, phase, plan, tacticalObjective],
   );
+
+  const finishResolution = useCallback(() => {
+    if (!pendingResolution) return;
+    const {
+      state,
+      plan: committedPlan,
+      source,
+      explanation,
+      objective,
+    } = pendingResolution;
+    setPendingResolution(null);
+    const next = resolveRound(state, committedPlan);
+    setCombat(next);
+    setLastObjective({
+      ...objective,
+      complete: evaluateObjective(objective, next.lastClash),
+    });
+    if (source === "ai") {
+      setDecisionHistory((current) => [
+        ...current,
+        {
+          round: state.round,
+          explanation:
+            explanation ||
+            `${COMMAND_STYLES[commandStyle].name} committed the order.`,
+          plan: committedPlan,
+        },
+      ]);
+    }
+    if (next.outcome) {
+      setPhase("result");
+      return;
+    }
+
+    const nextChoice = chooseCommandPlan(next, commandStyle);
+    setPlan(
+      controlMode === "command"
+        ? buildDefaultPlan(next)
+        : (nextChoice?.plan ?? buildDefaultPlan(next)),
+    );
+    setAiInsight(
+      controlMode === "command"
+        ? "Full authority is yours. Build the next answer."
+        : (nextChoice?.explanation ?? "No recommendation available."),
+    );
+    setCommandStep(0);
+    setPhase("debrief");
+    setToast(`${next.debrief.grade} — review the exchange`);
+  }, [commandStyle, controlMode, pendingResolution]);
+
+  useEffect(() => {
+    if (
+      phase !== "resolving" ||
+      !pendingResolution ||
+      resolutionPaused
+    )
+      return undefined;
+    const timer = window.setTimeout(() => {
+      if (resolutionStep < RESOLUTION_BEATS.length - 1) {
+        setResolutionStep((current) => current + 1);
+      } else {
+        finishResolution();
+      }
+    },
+    (resolutionStep < RESOLUTION_BEATS.length - 1 ? 720 : 920) /
+      playbackSpeed);
+    return () => window.clearTimeout(timer);
+  }, [
+    finishResolution,
+    pendingResolution,
+    phase,
+    playbackSpeed,
+    resolutionPaused,
+    resolutionStep,
+  ]);
+
+  useEffect(() => {
+    if (phase !== "debrief" || controlMode !== "watch") return undefined;
+    const timer = window.setTimeout(() => {
+      setPhase("battle");
+      setToast(`Round ${combat?.round ?? 1} — commander reading the field`);
+    }, 1500);
+    return () => window.clearTimeout(timer);
+  }, [combat?.round, controlMode, phase]);
 
   useEffect(() => {
     if (
@@ -357,7 +583,18 @@ export function App() {
     setLastImpact(null);
     setAiInsight("");
     setDecisionHistory([]);
+    setCommandStep(0);
+    setPowerDrawerOpen(false);
+    setPendingResolution(null);
+    setResolutionPaused(false);
+    setLastObjective(null);
     setToast("Adjust your three or opening doctrine");
+  }
+
+  function continueAfterDebrief() {
+    setPhase("battle");
+    setResolutionStep(0);
+    setToast(`Round ${combat.round} — new rival signals detected`);
   }
 
   function notify(label) {
@@ -573,11 +810,19 @@ export function App() {
             </header>
 
             <section
-              className={`battlefield-board ${phase === "resolving" ? "is-clashing" : ""}`}
+              className={`battlefield-board movement-${plan.movementId} ${phase === "resolving" ? `is-clashing resolution-beat-${resolutionStep}` : ""} ${resolutionPaused ? "is-paused" : ""}`}
               aria-label="Arena battlefield"
             >
+              {phase === "resolving" && (
+                <div className="combat-vfx" aria-hidden="true">
+                  <span className="combat-vfx-wash" />
+                  <span className="combat-vfx-line" />
+                  <span className="combat-vfx-impact" />
+                  <strong>{RESOLUTION_BEATS[resolutionStep].label}</strong>
+                </div>
+              )}
               <aside
-                className="general-panel"
+                className={`general-panel ${powerDrawerOpen ? "is-open" : ""}`}
                 aria-label="Player General and battle support"
               >
                 <div className="general-identity">
@@ -611,6 +856,14 @@ export function App() {
                   </strong>
                   <p>{combat.debrief?.summary ?? aiInsight ?? combat.log[0]}</p>
                 </div>
+                <button
+                  className="general-tools-toggle"
+                  onClick={() => setPowerDrawerOpen((current) => !current)}
+                  aria-expanded={powerDrawerOpen}
+                >
+                  <span>General powers & items</span>
+                  <strong>{powerDrawerOpen ? "Close" : "Open"}</strong>
+                </button>
                 <div className="general-tool-group">
                   <small>Command powers · choose one</small>
                   <div className="general-power-grid">
@@ -707,13 +960,15 @@ export function App() {
                 <p className="combat-kicker">Your line · choose lead</p>
                 {combat.heroes.map((hero, index) => {
                   const threatened = forecast?.targetIds.includes(hero.id);
+                  const isSupporting = plan.assistId === hero.id;
                   return (
                     <button
                       key={hero.id}
-                      className={`battle-unit is-ally ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${lastImpact?.actorId === hero.id && phase === "resolving" ? "is-striking" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
+                      className={`battle-unit is-ally ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${lastImpact?.actorId === hero.id && phase === "resolving" && resolutionStep >= 2 && resolutionStep <= 3 ? "is-striking" : ""} ${isSupporting && phase === "resolving" && resolutionStep === 1 ? "is-supporting" : ""} ${threatened && phase === "resolving" && resolutionStep === 4 ? "is-taking-hit" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
                       onClick={() => hero.hp > 0 && selectLead(hero)}
                       disabled={hero.hp <= 0 || ordersLocked}
                     >
+                      <span className="lane-number">{index + 1}</span>
                       <span className="unit-sigil">
                         {hero.name.slice(0, 1)}
                       </span>
@@ -733,7 +988,16 @@ export function App() {
                       {plan.leadId === hero.id && (
                         <span className="unit-tag">Lead {index + 1}</span>
                       )}
-                      {phase === "resolving" && threatened && (
+                      {phase === "resolving" &&
+                        resolutionStep === 1 &&
+                        isSupporting && (
+                          <span className="floating-number is-support">
+                            Support
+                          </span>
+                        )}
+                      {phase === "resolving" &&
+                        resolutionStep === 4 &&
+                        threatened && (
                         <span className="floating-number is-damage">
                           -{lastImpact?.incoming}
                         </span>
@@ -744,6 +1008,80 @@ export function App() {
               </div>
 
               <div className="clash-core" aria-live="polite">
+                <div className={`battle-map is-${plan.movementId}`}>
+                  <div className="battle-map-heading">
+                    <small>Live formation</small>
+                    <strong>
+                      {MOVEMENT_STRATEGIES[plan.movementId]?.name}
+                    </strong>
+                  </div>
+                  <div className="formation-read">
+                    <span>
+                      <small>Payoff</small>
+                      <strong>{movementRead.payoff}</strong>
+                    </span>
+                    <span>
+                      <small>Exposure</small>
+                      <strong>{movementRead.risk}</strong>
+                    </span>
+                  </div>
+                  {combat.heroes.map((hero, index) => {
+                    const enemy = combat.enemies[index];
+                    const isLead = hero.id === plan.leadId;
+                    const isTarget = enemy?.id === plan.targetId;
+                    const isThreatened = forecast?.targetIds.includes(hero.id);
+                    return (
+                      <div
+                        className={`battle-map-lane ${isLead ? "is-lead" : ""} ${isTarget ? "is-target" : ""} ${isThreatened ? "is-threatened" : ""}`}
+                        key={`map-${hero.id}`}
+                      >
+                        <span className="map-unit is-friendly">
+                          {hero.name}
+                        </span>
+                        <span className="range-band">
+                          <small>Lane {index + 1}</small>
+                          <strong>
+                            {phase === "resolving" &&
+                            resolutionStep === 4 &&
+                            isThreatened
+                              ? "Under fire"
+                              : phase === "resolving" &&
+                                  resolutionStep >= 2 &&
+                                  resolutionStep <= 3 &&
+                                  isLead &&
+                                  isTarget
+                                ? "Impact"
+                                : isLead && isTarget
+                              ? "Engaged"
+                              : isLead
+                                ? "Advancing"
+                                : isTarget
+                                  ? "Marked"
+                                  : "Holding"}
+                          </strong>
+                        </span>
+                        <span className="map-unit is-hostile">
+                          {enemy?.name ?? "Broken"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {tacticalObjective && (
+                  <div
+                    className={`round-objective ${tacticalObjective.predicted ? "is-secured" : "is-risk"}`}
+                  >
+                    <span>
+                      <small>Round objective</small>
+                      <strong>{tacticalObjective.title}</strong>
+                    </span>
+                    <p>{tacticalObjective.detail}</p>
+                    <b>
+                      {tacticalObjective.predicted ? "Likely secured" : "At risk"}
+                      <em>{tacticalObjective.progress}</em>
+                    </b>
+                  </div>
+                )}
                 <div className="intent-rune">
                   <small>Rival move</small>
                   <strong>{forecast?.headline}</strong>
@@ -793,16 +1131,17 @@ export function App() {
 
               <div className="battle-side rival-line">
                 <p className="combat-kicker">Rival line · choose target</p>
-                {combat.enemies.map((enemy) => (
+                {combat.enemies.map((enemy, index) => (
                   <button
                     key={enemy.id}
-                    className={`battle-unit is-rival ${plan.targetId === enemy.id ? "is-selected" : ""} ${forecast?.actorName === enemy.name ? "is-acting" : ""} ${lastImpact?.targetId === enemy.id && phase === "resolving" ? "is-hit" : ""} ${hpClass(enemy.hp, enemy.maxHp)}`}
+                    className={`battle-unit is-rival ${plan.targetId === enemy.id ? "is-selected" : ""} ${forecast?.actorName === enemy.name ? "is-acting" : ""} ${lastImpact?.targetId === enemy.id && phase === "resolving" && resolutionStep >= 2 && resolutionStep <= 3 ? "is-hit" : ""} ${forecast?.actorName === enemy.name && phase === "resolving" && resolutionStep === 4 ? "is-retaliating" : ""} ${hpClass(enemy.hp, enemy.maxHp)}`}
                     onClick={() =>
                       enemy.hp > 0 &&
                       setPlan((current) => ({ ...current, targetId: enemy.id }))
                     }
                     disabled={enemy.hp <= 0 || ordersLocked}
                   >
+                    <span className="lane-number">{index + 1}</span>
                     <span className="unit-sigil">{enemy.name.slice(0, 1)}</span>
                     <span className="unit-copy">
                       <strong>{enemy.name}</strong>
@@ -817,7 +1156,15 @@ export function App() {
                       <span className="unit-tag">Target</span>
                     )}
                     {lastImpact?.targetId === enemy.id &&
-                      phase === "resolving" && (
+                      phase === "resolving" &&
+                      resolutionStep === 2 && (
+                        <span className="floating-number is-ability">
+                          Ability
+                        </span>
+                      )}
+                    {lastImpact?.targetId === enemy.id &&
+                      phase === "resolving" &&
+                      resolutionStep === 3 && (
                         <span className="floating-number is-strike">
                           -{lastImpact?.outgoing}
                         </span>
@@ -831,7 +1178,25 @@ export function App() {
               className={`command-deck ${phase === "resolving" ? "is-resolving" : ""}`}
               aria-label="Combat plan controls"
             >
-              <div className="command-column strategy-column">
+              <div className="command-progress" aria-label="Command sequence">
+                {COMMAND_STEPS.map((step, index) => (
+                  <button
+                    key={step.id}
+                    className={`${commandStep === index ? "is-current" : ""} ${commandSummaries[index] !== "Choose" ? "is-complete" : ""}`}
+                    onClick={() => setCommandStep(index)}
+                    disabled={ordersLocked}
+                    aria-current={commandStep === index ? "step" : undefined}
+                  >
+                    <span>{index + 1}</span>
+                    <small>{step.label}</small>
+                    <strong>{commandSummaries[index]}</strong>
+                  </button>
+                ))}
+              </div>
+
+              <div
+                className={`command-column strategy-column ${commandStep === 0 ? "is-command-active" : ""}`}
+              >
                 <p className="combat-kicker">
                   <span>1</span> Commander strategy
                 </p>
@@ -852,7 +1217,9 @@ export function App() {
                 </div>
               </div>
 
-              <div className="command-column movement-column">
+              <div
+                className={`command-column movement-column ${commandStep === 1 ? "is-command-active" : ""}`}
+              >
                 <p className="combat-kicker">
                   <span>2</span> Movement strategy
                 </p>
@@ -888,7 +1255,9 @@ export function App() {
                 )}
               </div>
 
-              <div className="command-column tactic-column">
+              <div
+                className={`command-column tactic-column ${commandStep === 2 ? "is-command-active" : ""}`}
+              >
                 <p className="combat-kicker">
                   <span>3</span> Tactical response
                 </p>
@@ -915,7 +1284,9 @@ export function App() {
                 </div>
               </div>
 
-              <div className="command-column ability-column">
+              <div
+                className={`command-column ability-column ${commandStep === 3 ? "is-command-active" : ""}`}
+              >
                 <p className="combat-kicker">
                   <span>4</span> Lead ability · {lead?.name}
                 </p>
@@ -951,7 +1322,9 @@ export function App() {
                 </div>
               </div>
 
-              <div className="command-column assist-column">
+              <div
+                className={`command-column assist-column ${commandStep === 4 ? "is-command-active" : ""}`}
+              >
                 <p className="combat-kicker">
                   <span>5</span> Hero support
                 </p>
@@ -993,7 +1366,181 @@ export function App() {
                   </button>
                 </div>
               </div>
+
+              <div className="command-dock-actions">
+                <button
+                  className="command-back"
+                  onClick={() =>
+                    setCommandStep((current) => Math.max(0, current - 1))
+                  }
+                  disabled={commandStep === 0 || ordersLocked}
+                >
+                  Back
+                </button>
+                <span>
+                  <small>Step {commandStep + 1} of 5</small>
+                  <strong>{COMMAND_STEPS[commandStep].label}</strong>
+                </span>
+                {commandStep < COMMAND_STEPS.length - 1 ? (
+                  <button
+                    className="command-next"
+                    onClick={() =>
+                      setCommandStep((current) =>
+                        Math.min(COMMAND_STEPS.length - 1, current + 1),
+                      )
+                    }
+                    disabled={ordersLocked}
+                  >
+                    Next
+                  </button>
+                ) : (
+                  <button
+                    className="command-dock-commit"
+                    onClick={() => commitCombat()}
+                    disabled={Boolean(planError) || ordersLocked}
+                  >
+                    Commit attack
+                  </button>
+                )}
+              </div>
             </section>
+
+            {phase === "resolving" && pendingResolution && (
+              <section
+                className={`resolution-stage beat-${resolutionStep}`}
+                aria-live="assertive"
+              >
+                <div className="resolution-heading">
+                  <span>
+                    <small>Clash sequence</small>
+                    <strong>{RESOLUTION_BEATS[resolutionStep].label}</strong>
+                  </span>
+                  <p>{RESOLUTION_BEATS[resolutionStep].detail}</p>
+                </div>
+                <div className="resolution-callout">
+                  <small>{resolutionCallouts[resolutionStep].eyebrow}</small>
+                  <strong>{resolutionCallouts[resolutionStep].title}</strong>
+                  <p>{resolutionCallouts[resolutionStep].detail}</p>
+                </div>
+                <div className="resolution-timeline" aria-hidden="true">
+                  {RESOLUTION_BEATS.map((beat, index) => (
+                    <span
+                      key={beat.label}
+                      className={
+                        index < resolutionStep
+                          ? "is-complete"
+                          : index === resolutionStep
+                            ? "is-current"
+                            : ""
+                      }
+                    >
+                      {index + 1}
+                    </span>
+                  ))}
+                </div>
+                {resolutionDetails && preview && !preview.error && (
+                  <div className="resolution-inspect">
+                    <span>
+                      <small>Strike</small>
+                      <strong>{preview.outgoing}</strong>
+                    </span>
+                    <span>
+                      <small>Retaliation</small>
+                      <strong>{preview.incoming}</strong>
+                    </span>
+                    <span>
+                      <small>Denied</small>
+                      <strong>{preview.prevented}</strong>
+                    </span>
+                  </div>
+                )}
+                <div className="resolution-actions">
+                  <button
+                    onClick={() => setResolutionPaused((current) => !current)}
+                    aria-pressed={resolutionPaused}
+                  >
+                    {resolutionPaused ? "Resume" : "Pause"}
+                  </button>
+                  <button
+                    onClick={() =>
+                      setPlaybackSpeed((current) => (current === 1 ? 2 : 1))
+                    }
+                    aria-label={`Playback speed ${playbackSpeed} times`}
+                  >
+                    {playbackSpeed}× speed
+                  </button>
+                  <button
+                    onClick={() =>
+                      setResolutionDetails((current) => !current)
+                    }
+                  >
+                    {resolutionDetails ? "Hide detail" : "Inspect"}
+                  </button>
+                  <button onClick={finishResolution}>Skip animation</button>
+                </div>
+              </section>
+            )}
+
+            {phase === "debrief" && (
+              <section className="round-debrief" aria-live="polite">
+                <div className="debrief-grade">
+                  <small>Round {combat.round - 1} tactical debrief</small>
+                  <h2>{combat.debrief?.grade}</h2>
+                  <p>{combat.debrief?.summary}</p>
+                </div>
+                <div className="debrief-metrics">
+                  <span>
+                    <small>Damage dealt</small>
+                    <strong>{combat.lastClash?.damageDealt ?? 0}</strong>
+                  </span>
+                  <span>
+                    <small>Damage taken</small>
+                    <strong>{combat.lastClash?.damageTaken ?? 0}</strong>
+                  </span>
+                  <span>
+                    <small>Damage denied</small>
+                    <strong>{combat.lastClash?.damagePrevented ?? 0}</strong>
+                  </span>
+                </div>
+                <div className="debrief-learning">
+                  <small>What changed</small>
+                  <strong>
+                    {combat.lastClash?.tacticMatched
+                      ? `${combat.lastClash.tacticName} correctly answered ${combat.lastClash.intentName}.`
+                      : `${combat.lastClash?.intentName} slipped past ${combat.lastClash?.tacticName}.`}
+                  </strong>
+                  <p>
+                    {combat.lastClash?.combo
+                      ? `${combat.lastClash.combo.name} activated through your Hero Support choice.`
+                      : "Try matching the recommended response or changing your support to build a chain."}
+                  </p>
+                </div>
+                {lastObjective && (
+                  <div
+                    className={`objective-result ${lastObjective.complete ? "is-complete" : "is-missed"}`}
+                  >
+                    <span>
+                      <small>Round objective</small>
+                      <strong>
+                        {lastObjective.complete ? "Secured" : "Missed"}
+                      </strong>
+                    </span>
+                    <p>{lastObjective.title}</p>
+                    <em>
+                      {lastObjective.complete
+                        ? "Objective completed through deliberate command."
+                        : `Next read: ${lastObjective.target}.`}
+                    </em>
+                  </div>
+                )}
+                <button
+                  className="continue-command"
+                  onClick={continueAfterDebrief}
+                >
+                  Read round {combat.round} intent
+                </button>
+              </section>
+            )}
           </>
         ) : null}
 
