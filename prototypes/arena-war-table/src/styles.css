@@ -2556,6 +2556,10 @@ button:focus-visible {
   line-height: 1.25;
 }
 
+.energy-chip strong {
+  font-size: var(--ui-small);
+}
+
 .mastery-objectives strong,
 .mastery-objectives small {
   display: block;
@@ -2673,5 +2677,685 @@ button:focus-visible {
     align-items: stretch;
     flex-direction: column;
     text-align: left;
+  }
+}
+
+/* Readable UI scale: compact fantasy styling without sacrificing legibility. */
+:root {
+  --ui-meta: 0.75rem;
+  --ui-small: 0.875rem;
+  --ui-body: 1rem;
+  --ui-title: 1.125rem;
+  --tap-target: 2.75rem;
+}
+
+.arena-frame :is(button, [role="button"]):focus-visible {
+  outline: 3px solid #8ff6f0;
+  outline-offset: 2px;
+}
+
+.arena-frame :is(button, [role="button"]) {
+  touch-action: manipulation;
+}
+
+.orders-panel > .panel-kicker,
+.panel-kicker,
+.combat-kicker {
+  font-size: var(--ui-meta);
+  line-height: 1.25;
+}
+
+.order-row {
+  min-height: var(--tap-target);
+}
+
+.order-number {
+  font-size: var(--ui-small);
+}
+
+.order-copy small {
+  font-size: var(--ui-meta);
+  line-height: 1.25;
+}
+
+.order-copy strong {
+  font-size: var(--ui-small);
+  line-height: 1.2;
+}
+
+.interaction-label,
+.selection-badge,
+.lane-hitbox span,
+.lane-hitbox strong {
+  font-size: var(--ui-meta);
+  line-height: 1.25;
+}
+
+.authority-heading > strong,
+.authority-heading span strong {
+  font-size: var(--ui-body);
+  line-height: 1.2;
+}
+
+.authority-heading > small,
+.authority-heading span small,
+.authority-mode-grid small {
+  font-size: var(--ui-meta);
+  line-height: 1.35;
+}
+
+.authority-mode-grid button,
+.authority-mode-strip button,
+.command-style-row button,
+.authority-toggle {
+  min-height: var(--tap-target);
+}
+
+.authority-mode-grid strong {
+  font-size: var(--ui-small);
+  line-height: 1.2;
+}
+
+.command-style-row button,
+.authority-mode-strip button,
+.authority-toggle,
+.authority-status {
+  font-size: var(--ui-meta);
+  line-height: 1.2;
+}
+
+.round-chip small,
+.timer-chip small,
+.energy-chip small,
+.intent-card small,
+.momentum-chip small,
+.unit-tag,
+.intent-rune small,
+.counter-callout small,
+.ability-cost,
+.ai-insight small,
+.mastery-heading small,
+.battle-ledger small,
+.last-ai-call small {
+  font-size: var(--ui-meta);
+  line-height: 1.25;
+}
+
+.intent-card strong,
+.intent-target,
+.battle-unit .unit-copy strong,
+.unit-copy strong,
+.hp-copy,
+.intent-rune strong,
+.counter-callout strong,
+.clash-preview strong,
+.clash-preview b,
+.tactic-card strong,
+.ability-card strong,
+.assist-card strong,
+.surge-toggle strong,
+.combat-log strong,
+.mastery-objectives strong,
+.battle-ledger strong {
+  font-size: var(--ui-small);
+  line-height: 1.25;
+}
+
+.battle-unit .unit-copy small,
+.unit-copy small,
+.intent-rune span,
+.counter-callout span,
+.clash-preview,
+.tactic-card small,
+.ability-card small,
+.assist-card small,
+.surge-toggle small,
+.lock-plan small,
+.combat-log p:not(.combat-kicker),
+.ai-insight p,
+.mastery-objectives small,
+.result-card .mastery-objectives small,
+.result-card .last-ai-call,
+.roster-option small,
+.drawer-note,
+.select-copy {
+  font-size: var(--ui-meta);
+  line-height: 1.4;
+}
+
+.battle-unit,
+.tactic-card,
+.ability-card,
+.assist-card,
+.surge-toggle,
+.lock-plan,
+.roster-option,
+.close-button,
+.result-actions button,
+.toast {
+  min-height: var(--tap-target);
+}
+
+.close-button,
+.toast {
+  font-size: var(--ui-small);
+}
+
+.result-card p:not(.panel-kicker) {
+  font-size: var(--ui-body);
+}
+
+.result-actions button {
+  font-size: var(--ui-small);
+}
+
+@media (min-width: 761px) and (min-aspect-ratio: 1 / 1) {
+  .orders-panel {
+    left: 75.2%;
+    top: 43.5%;
+    width: 23.6%;
+    height: 30.5%;
+    padding: 1.1% 1% 0.8%;
+  }
+
+  .order-row {
+    height: 27.8%;
+    margin-bottom: 2.5%;
+  }
+
+  .authority-setup-panel {
+    top: 39.5%;
+    width: 31%;
+    padding: 1%;
+  }
+
+  .authority-setup-panel .authority-heading {
+    gap: 0.25rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .authority-mode-grid {
+    gap: 0.45rem;
+  }
+
+  .authority-mode-grid button {
+    min-height: 3.6rem;
+    padding: 0.55rem;
+  }
+
+  .command-style-row {
+    gap: 0.45rem;
+    margin-top: 0.55rem;
+  }
+
+  .command-style-row button {
+    padding: 0.5rem 0.35rem;
+  }
+
+  .commit-button {
+    min-height: 3.25rem;
+    border-color: rgb(239 207 126 / 72%);
+    background: linear-gradient(180deg, rgb(5 22 31 / 70%), rgb(2 10 16 / 82%));
+    color: #ffe29a;
+    font-size: var(--ui-title);
+    text-shadow: 0 2px 6px #000;
+  }
+
+  .combat-header {
+    top: 1%;
+    height: 10.6%;
+  }
+
+  .intent-card {
+    padding-inline: 0.65rem;
+  }
+
+  .intent-card strong {
+    white-space: normal;
+  }
+
+  .authority-dock {
+    width: 19.2%;
+    padding: 0.8%;
+  }
+
+  .authority-mode-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .authority-mode-strip button {
+    padding: 0.45rem 0.2rem;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .authority-toggle {
+    padding: 0.55rem;
+  }
+
+  body .command-deck {
+    right: 1.2%;
+    bottom: 11%;
+    left: 1.2%;
+    height: 32.5%;
+    gap: 0.5%;
+  }
+
+  .command-column,
+  .lock-column {
+    padding: 1.6%;
+  }
+
+  .tactic-card,
+  .ability-card,
+  .assist-card {
+    padding: 0.55rem;
+  }
+
+  .tactic-card {
+    grid-template-columns: 2rem minmax(0, 1fr);
+  }
+
+  .surge-toggle {
+    margin-bottom: 0.45rem;
+  }
+
+  .combat-log {
+    min-height: 8.5rem;
+  }
+
+  .ai-insight {
+    right: 2%;
+    bottom: 2%;
+    left: 2%;
+    padding: 0.55rem;
+  }
+
+  .roster-drawer {
+    width: min(34rem, 44%);
+  }
+
+  .bottom-nav button {
+    min-height: var(--tap-target);
+  }
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
+  :root {
+    --ui-meta: 0.875rem;
+    --ui-small: 1rem;
+    --ui-body: 1rem;
+    --ui-title: 1.25rem;
+    --tap-target: 3rem;
+  }
+
+  .arena-frame {
+    gap: 0.9rem;
+    padding-inline: 0.85rem;
+  }
+
+  .mobile-masthead {
+    min-height: 4.5rem;
+    padding: 0.8rem 0.9rem;
+  }
+
+  .mobile-masthead strong {
+    font-size: 1.125rem;
+  }
+
+  .mobile-masthead small,
+  .mobile-masthead span > small {
+    font-size: var(--ui-meta);
+    line-height: 1.3;
+  }
+
+  .hero-hitboxes {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .hero-hitbox {
+    min-height: 4.75rem;
+    padding: 0.75rem;
+    text-align: left;
+  }
+
+  .hero-hitbox::before,
+  .hero-hitbox .selection-badge {
+    font-size: var(--ui-meta);
+  }
+
+  .hero-hitbox .interaction-label {
+    font-size: var(--ui-body);
+    line-height: 1.3;
+  }
+
+  .orders-panel,
+  .authority-setup-panel,
+  .authority-dock,
+  .squad-status,
+  .rival-status,
+  .command-deck,
+  .combat-log {
+    padding: 0.9rem;
+  }
+
+  .orders-panel > .panel-kicker,
+  .panel-kicker,
+  .combat-kicker {
+    margin-bottom: 0.7rem;
+    font-size: var(--ui-meta);
+  }
+
+  .order-row {
+    min-height: 4.25rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .order-copy {
+    padding-left: 0.75rem;
+  }
+
+  .order-copy small {
+    font-size: var(--ui-meta);
+    white-space: normal;
+  }
+
+  .order-copy strong {
+    font-size: var(--ui-body);
+  }
+
+  .authority-heading > strong,
+  .authority-heading span strong {
+    font-size: var(--ui-title);
+  }
+
+  .authority-heading > small,
+  .authority-heading span small,
+  .authority-mode-grid small {
+    font-size: var(--ui-meta);
+  }
+
+  .authority-mode-grid {
+    gap: 0.6rem;
+  }
+
+  .authority-mode-grid button {
+    min-height: 5rem;
+    padding: 0.75rem;
+  }
+
+  .authority-mode-grid strong {
+    font-size: var(--ui-body);
+  }
+
+  .command-style-row,
+  .authority-mode-strip {
+    gap: 0.5rem;
+  }
+
+  .command-style-row button,
+  .authority-mode-strip button,
+  .authority-toggle,
+  .authority-status {
+    min-height: var(--tap-target);
+    font-size: var(--ui-meta);
+    white-space: normal;
+  }
+
+  .authority-mode-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .commit-button {
+    min-height: 4rem;
+    font-size: var(--ui-title);
+  }
+
+  body .combat-header {
+    grid-template-columns: 4.25rem minmax(0, 1fr) 4.25rem;
+    gap: 0.5rem;
+  }
+
+  .round-chip,
+  .timer-chip,
+  .intent-card,
+  .momentum-chip,
+  .energy-chip {
+    min-height: 4.5rem;
+  }
+
+  .round-chip small,
+  .timer-chip small,
+  .energy-chip small,
+  .intent-card small,
+  .momentum-chip small {
+    font-size: var(--ui-meta);
+  }
+
+  .momentum-chip strong,
+  .energy-chip strong {
+    font-size: var(--ui-body);
+  }
+
+  .intent-card strong,
+  .intent-target {
+    font-size: var(--ui-small);
+  }
+
+  .intent-card {
+    flex-wrap: wrap;
+  }
+
+  .intent-card > span:nth-child(2) {
+    flex: 1 1 calc(100% - 2.5rem);
+  }
+
+  .intent-target {
+    flex: 1 0 100%;
+    margin-left: 0;
+    text-align: center;
+  }
+
+  .intent-card > span:nth-child(2) {
+    overflow: visible;
+  }
+
+  .intent-card strong {
+    white-space: normal;
+  }
+
+  body .battlefield-board {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.8rem;
+  }
+
+  .battlefield-board::before {
+    display: none;
+  }
+
+  .battle-side {
+    gap: 0.55rem;
+  }
+
+  .battle-unit {
+    min-height: 4.5rem;
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    padding: 0.7rem;
+  }
+
+  .battle-unit:hover:not(:disabled),
+  .battle-unit.is-selected,
+  .battle-unit.is-rival:hover:not(:disabled),
+  .battle-unit.is-rival.is-selected {
+    transform: none;
+  }
+
+  .battle-unit .hp-copy {
+    display: block;
+  }
+
+  .battle-unit .unit-copy strong,
+  .battle-unit .unit-copy small,
+  .battle-unit .hp-copy {
+    font-size: var(--ui-meta);
+  }
+
+  .unit-tag {
+    font-size: 0.75rem;
+  }
+
+  .clash-core {
+    gap: 0.6rem;
+  }
+
+  .intent-rune,
+  .counter-callout,
+  .clash-preview {
+    padding: 0.75rem;
+  }
+
+  .intent-rune small,
+  .counter-callout small,
+  .intent-rune span,
+  .counter-callout span,
+  .clash-preview {
+    font-size: var(--ui-meta);
+  }
+
+  .intent-rune strong,
+  .counter-callout strong,
+  .clash-preview strong,
+  .clash-preview b {
+    font-size: var(--ui-body);
+  }
+
+  .ai-insight {
+    position: static;
+    margin-top: 0.1rem;
+    padding: 0.75rem;
+  }
+
+  .ai-insight small,
+  .ai-insight p {
+    font-size: var(--ui-meta);
+  }
+
+  body .tactic-grid,
+  .ability-grid,
+  .assist-grid {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
+  }
+
+  .tactic-card,
+  .ability-card,
+  .assist-card {
+    min-height: 4.75rem;
+    padding: 0.75rem;
+    text-align: left;
+  }
+
+  .tactic-card {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    gap: 0.75rem;
+    text-align: left;
+  }
+
+  .tactic-code {
+    width: 2.25rem;
+    margin: 0;
+  }
+
+  .tactic-card strong,
+  .ability-card strong,
+  .assist-card strong,
+  .surge-toggle strong {
+    font-size: var(--ui-body);
+  }
+
+  .tactic-card small,
+  .ability-card small,
+  .assist-card small,
+  .surge-toggle small,
+  .lock-plan small {
+    font-size: var(--ui-meta);
+  }
+
+  .ability-cost {
+    font-size: var(--ui-meta);
+  }
+
+  .surge-toggle,
+  .lock-plan {
+    min-height: 4.75rem;
+  }
+
+  .lock-plan {
+    font-size: var(--ui-title);
+  }
+
+  .combat-log strong,
+  .combat-log p:not(.combat-kicker) {
+    font-size: var(--ui-meta);
+  }
+
+  .bottom-nav button {
+    min-width: 0;
+    min-height: var(--tap-target);
+    padding: 0.65rem 0.25rem;
+    font-family: Inter, Arial, sans-serif;
+    font-size: var(--ui-meta);
+    letter-spacing: 0;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .roster-option {
+    min-height: 5rem;
+  }
+
+  .roster-option strong,
+  .close-button,
+  .select-copy,
+  .drawer-note,
+  .result-actions button,
+  .toast {
+    font-size: var(--ui-meta);
+  }
+
+  .result-card p:not(.panel-kicker) {
+    font-size: var(--ui-body);
+  }
+
+  .mastery-objectives {
+    grid-template-columns: 1fr;
+  }
+
+  .mastery-objectives strong,
+  .mastery-objectives small,
+  .result-card .mastery-objectives p,
+  .battle-ledger strong,
+  .battle-ledger small,
+  .result-card .last-ai-call,
+  .last-ai-call small {
+    font-size: var(--ui-meta);
+  }
+
+  .battle-ledger {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (pointer: coarse) {
+  .arena-frame :is(button, [role="button"]) {
+    min-height: 2.75rem;
   }
 }
