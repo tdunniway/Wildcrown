@@ -13,6 +13,10 @@ Before making substantial visual changes, use the Product Design plugin's `get-c
 - Victories should create a lightweight run-building choice before the next tier.
 - Keep the prototype playable in portrait instead of replacing it with a rotate-only gate.
 - Favor forecastable tactical depth over hidden automation: show the next threat, rotate optional combat objectives, and reward players for changing their answer without obscuring the core clash.
+- Keep the battle command sequence explicit and consistent: commander strategy, movement strategy, tactical response, lead ability, then hero support.
+- Keep Command Authority and the Commit action together in the top battle-status header so control mode and execution state are always visible.
+- Treat the General as the persistent player-facing commander: show readable advice plus limited powers, quick items, and a support weapon with visible cooldown or consumption state.
+- Every deployed hero commands a selectable army. Army and movement pairings must create visible, forecastable mechanical synergies rather than cosmetic labels.
 
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 

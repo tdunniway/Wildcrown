@@ -38,7 +38,11 @@ function safePlan(state) {
     assistId: assist?.id ?? "brace",
     targetId: target.id,
     tacticId: getEnemyIntent(state).counterTactic,
+    movementId: "direct",
     useSurge: false,
+    generalAbilityId: "",
+    itemId: "",
+    useSupportWeapon: false,
   };
 }
 
@@ -82,7 +86,11 @@ test("a planned clash spends energy, applies support, and starts cooldowns", () 
     assistId: "vex-2",
     targetId: "branna-rival",
     tacticId: "disrupt",
+    movementId: "ranged",
     useSurge: false,
+    generalAbilityId: "",
+    itemId: "",
+    useSupportWeapon: false,
   };
 
   assert.equal(validatePlan(state, plan), null);
@@ -92,9 +100,9 @@ test("a planned clash spends energy, applies support, and starts cooldowns", () 
   assert.equal(next.energy, 2);
   assert.deepEqual(
     next.enemies.map((enemy) => enemy.hp),
-    [56, 72, 52],
+    [52, 68, 48],
   );
-  assert.equal(next.heroes[0].hp, 81);
+  assert.equal(next.heroes[0].hp, 90);
   assert.equal(next.lastClash.tacticMatched, true);
   assert.equal(next.lastClash.combo.name, "Vanishing Point");
   assert.equal(next.momentum, 2);
@@ -124,6 +132,63 @@ test("each enemy intent exposes a distinct tactical counter and preview", () => 
     assert.ok(preview.prevented > 0 || expected === "disrupt");
     state = resolveRound(state, plan);
   }
+});
+
+test("hero armies reward matching movement strategies", () => {
+  const state = createCombatState([
+    { name: "Lyra", armyId: "longbows" },
+    { name: "Torin", armyId: "guard" },
+    { name: "Vex", armyId: "riders" },
+  ]);
+  const rangedPlan = {
+    ...safePlan(state),
+    leadId: "lyra-0",
+    abilityId: "quickshot",
+    movementId: "ranged",
+  };
+  const directPlan = { ...rangedPlan, movementId: "direct" };
+
+  const ranged = previewRound(state, rangedPlan);
+  const direct = previewRound(state, directPlan);
+
+  assert.ok(
+    ranged.outgoing > direct.outgoing,
+    "longbows should improve ranged attacks",
+  );
+  assert.ok(
+    ranged.prevented > direct.prevented,
+    "ranged movement should reduce retaliation",
+  );
+});
+
+test("General powers, items, and the support weapon are limited resources", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"]);
+  const plan = {
+    ...safePlan(state),
+    generalAbilityId: "decree",
+    itemId: "spark",
+    useSupportWeapon: true,
+  };
+
+  const preview = previewRound(state, plan);
+  const next = resolveRound(state, plan);
+
+  assert.ok(preview.outgoing >= 60);
+  assert.equal(next.general.charges.decree, 0);
+  assert.equal(next.items.spark, 0);
+  assert.equal(next.supportWeaponReady, false);
+  assert.match(
+    validatePlan(next, { ...safePlan(next), generalAbilityId: "decree" }),
+    /already been spent/i,
+  );
+  assert.match(
+    validatePlan(next, { ...safePlan(next), itemId: "spark" }),
+    /already been used/i,
+  );
+  assert.match(
+    validatePlan(next, { ...safePlan(next), useSupportWeapon: true }),
+    /already fired/i,
+  );
 });
 
 test("legal fallback play always reaches a result without deadlocking", () => {

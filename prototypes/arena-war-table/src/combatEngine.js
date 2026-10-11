@@ -72,6 +72,102 @@ export const TACTICS = {
   },
 };
 
+export const MOVEMENT_STRATEGIES = {
+  direct: {
+    id: "direct",
+    name: "Direct Attack",
+    code: "DA",
+    short: "+6 strike damage",
+    description: "Drive the lead army straight through the rival line.",
+  },
+  flank: {
+    id: "flank",
+    name: "Flanking Attack",
+    code: "FA",
+    short: "+10 damage · +3 risk",
+    description: "Trade safety for a stronger strike around the formation.",
+  },
+  ranged: {
+    id: "ranged",
+    name: "Ranged Attack",
+    code: "RA",
+    short: "+4 damage · deny 4",
+    description: "Pressure the rival from distance while limiting retaliation.",
+  },
+  shield: {
+    id: "shield",
+    name: "Defensive Shield",
+    code: "DS",
+    short: "Deny 11 · -4 damage",
+    description: "Lock shields and absorb the rival's committed attack.",
+  },
+};
+
+export const ARMY_TYPES = {
+  guard: {
+    id: "guard",
+    name: "Crown Guard",
+    icon: "◆",
+    short: "+5 protection",
+    description: "Armored infantry that reduces incoming damage.",
+  },
+  longbows: {
+    id: "longbows",
+    name: "Dawn Longbows",
+    icon: "➶",
+    short: "+6 ranged damage",
+    description: "Disciplined archers strongest behind a ranged advance.",
+  },
+  riders: {
+    id: "riders",
+    name: "Thorn Riders",
+    icon: "✦",
+    short: "+7 flank damage",
+    description: "Fast cavalry built to exploit flanking attacks.",
+  },
+};
+
+export const GENERAL_ABILITIES = {
+  rally: {
+    id: "rally",
+    name: "Royal Rally",
+    icon: "♛",
+    short: "+12 damage",
+    description: "The General rallies every banner behind the lead strike.",
+    cooldown: 3,
+  },
+  aegis: {
+    id: "aegis",
+    name: "Crown Aegis",
+    icon: "⬡",
+    short: "Deny 14",
+    description: "Raise a royal ward over the threatened formation.",
+    cooldown: 3,
+  },
+  decree: {
+    id: "decree",
+    name: "Final Decree",
+    icon: "✹",
+    short: "+20 damage · once",
+    description:
+      "Spend the General's once-per-battle command to break the line.",
+    charges: 1,
+  },
+};
+
+export const BATTLE_ITEMS = {
+  tonic: { id: "tonic", name: "Field Tonic", icon: "+", short: "Heal lead 18" },
+  smoke: { id: "smoke", name: "Smoke Flask", icon: "◌", short: "Deny 9" },
+  spark: { id: "spark", name: "Wild Spark", icon: "◆", short: "+9 damage" },
+};
+
+export const SUPPORT_WEAPON = {
+  id: "catapult",
+  name: "Sunfire Catapult",
+  icon: "☄",
+  short: "+8 to every rival · once",
+};
+
 export const HERO_LIBRARY = {
   Lyra: {
     role: "Ranged",
@@ -308,21 +404,29 @@ export const ENEMY_LIBRARY = [
   { id: "elara", name: "Elara", role: "Invoker", maxHp: 88 },
 ];
 
-export function createCombatState(heroNames, doctrine = "scout") {
+export function createCombatState(heroSelections, doctrine = "scout") {
   return {
     round: 1,
     energy: 3,
     momentum: 0,
     doctrine: DOCTRINES[doctrine] ? doctrine : "scout",
-    heroes: heroNames.map((name, slot) => ({
-      id: `${name.toLowerCase()}-${slot}`,
-      name,
-      role: HERO_LIBRARY[name].role,
-      hp: 100,
-      maxHp: 100,
-      cooldowns: {},
-      assistReadyRound: 1,
-    })),
+    heroes: heroSelections.map((selection, slot) => {
+      const name = typeof selection === "string" ? selection : selection.name;
+      const armyId =
+        typeof selection === "string"
+          ? Object.keys(ARMY_TYPES)[slot % Object.keys(ARMY_TYPES).length]
+          : selection.armyId;
+      return {
+        id: `${name.toLowerCase()}-${slot}`,
+        name,
+        role: HERO_LIBRARY[name].role,
+        armyId: ARMY_TYPES[armyId] ? armyId : "guard",
+        hp: 100,
+        maxHp: 100,
+        cooldowns: {},
+        assistReadyRound: 1,
+      };
+    }),
     enemies: ENEMY_LIBRARY.map((enemy) => ({
       ...enemy,
       hp: enemy.maxHp,
@@ -332,6 +436,18 @@ export function createCombatState(heroNames, doctrine = "scout") {
     debrief: null,
     lastClash: null,
     outcome: null,
+    general: {
+      id: "seraphine",
+      name: "Seraphine Vale",
+      title: "The Crown Marshal",
+      level: 61,
+      command: 84,
+      resolve: 76,
+      cooldowns: {},
+      charges: { decree: 1 },
+    },
+    items: { tonic: 1, smoke: 1, spark: 1 },
+    supportWeaponReady: true,
     stats: {
       rounds: 0,
       manualRounds: 0,
@@ -476,6 +592,8 @@ export function validatePlan(state, plan) {
   if (!target || !living(target)) return "Choose a living rival.";
   if (!ability) return "Choose an ability.";
   if (!TACTICS[plan.tacticId]) return "Choose a tactical response.";
+  if (!MOVEMENT_STRATEGIES[plan.movementId])
+    return "Choose a movement strategy.";
   if (plan.useSurge && state.momentum < 3)
     return "Build 3 Crown Momentum before using a surge.";
   if (ability.cost > state.energy) return `You need ${ability.cost} energy.`;
@@ -488,6 +606,21 @@ export function validatePlan(state, plan) {
     if (assist.assistReadyRound > state.round)
       return `${assist.name}'s assist is still recovering.`;
   }
+  if (plan.generalAbilityId) {
+    const generalAbility = GENERAL_ABILITIES[plan.generalAbilityId];
+    if (!generalAbility) return "Choose a valid General ability.";
+    if ((state.general?.cooldowns?.[generalAbility.id] ?? 1) > state.round)
+      return `${generalAbility.name} is still recovering.`;
+    if (
+      generalAbility.charges &&
+      (state.general?.charges?.[generalAbility.id] ?? 0) <= 0
+    )
+      return `${generalAbility.name} has already been spent.`;
+  }
+  if (plan.itemId && (state.items?.[plan.itemId] ?? 0) <= 0)
+    return "That battle item has already been used.";
+  if (plan.useSupportWeapon && !state.supportWeaponReady)
+    return `${SUPPORT_WEAPON.name} has already fired.`;
   return null;
 }
 
@@ -564,6 +697,10 @@ export function resolveRound(state, plan) {
       ? null
       : state.heroes.find((hero) => hero.id === plan.assistId);
   const tactic = TACTICS[plan.tacticId];
+  const movement = MOVEMENT_STRATEGIES[plan.movementId];
+  const army = ARMY_TYPES[lead.armyId] ?? ARMY_TYPES.guard;
+  const generalAbility = GENERAL_ABILITIES[plan.generalAbilityId] ?? null;
+  const item = BATTLE_ITEMS[plan.itemId] ?? null;
   const tacticMatched = tactic.id === intent?.counterTactic;
   const combo = getCombo(lead, ability, assist, tactic.id);
   const surgeUsed = Boolean(plan.useSurge && state.momentum >= 3);
@@ -584,6 +721,27 @@ export function resolveRound(state, plan) {
   if (combo?.bonusDamage) bonusDamage += combo.bonusDamage;
   if (combo?.incomingReduction) incomingReduction += combo.incomingReduction;
   if (surgeUsed) bonusDamage += 12;
+  if (movement.id === "direct") bonusDamage += 6;
+  if (movement.id === "flank") {
+    bonusDamage += 10;
+    incomingReduction -= 3;
+  }
+  if (movement.id === "ranged") {
+    bonusDamage += 4;
+    incomingReduction += 4;
+  }
+  if (movement.id === "shield") {
+    bonusDamage -= 4;
+    incomingReduction += 11;
+  }
+  if (army.id === "guard") incomingReduction += 5;
+  if (army.id === "longbows" && movement.id === "ranged") bonusDamage += 6;
+  if (army.id === "riders" && movement.id === "flank") bonusDamage += 7;
+  if (generalAbility?.id === "rally") bonusDamage += 12;
+  if (generalAbility?.id === "aegis") incomingReduction += 14;
+  if (generalAbility?.id === "decree") bonusDamage += 20;
+  if (item?.id === "smoke") incomingReduction += 9;
+  if (item?.id === "spark") bonusDamage += 9;
   log.push(
     tacticMatched
       ? `${tactic.name} hard-counters ${intent.name}.`
@@ -591,6 +749,10 @@ export function resolveRound(state, plan) {
   );
   if (combo) log.push(`${combo.name}: ${combo.description}`);
   if (surgeUsed) log.push("Crown Surge adds 12 damage to the lead action.");
+  log.push(`${lead.name}'s ${army.name} execute ${movement.name}.`);
+  if (generalAbility)
+    log.push(`General ${state.general.name} invokes ${generalAbility.name}.`);
+  if (item) log.push(`${item.name} is consumed: ${item.short}.`);
 
   if (state.round === 1 && doctrine.id === "fortify") {
     incomingReduction += 8;
@@ -663,6 +825,14 @@ export function resolveRound(state, plan) {
     }
   }
 
+  if (item?.id === "tonic") {
+    heroes = heroes.map((hero) =>
+      hero.id === lead.id
+        ? { ...hero, hp: Math.min(hero.maxHp, hero.hp + 18) }
+        : hero,
+    );
+  }
+
   if (combo?.healAll) {
     heroes = heroes.map((hero) =>
       living(hero)
@@ -709,6 +879,22 @@ export function resolveRound(state, plan) {
   log.push(
     `${lead.name} uses ${ability.name}: ${playerLosses.map((loss) => `${loss.hpLoss} to ${loss.name}`).join(", ")}.`,
   );
+  const supportLosses = [];
+  if (plan.useSupportWeapon) {
+    enemies = enemies.map((enemy) => {
+      if (!living(enemy)) return enemy;
+      const result = applyShieldedDamage(enemy, 8, 4);
+      supportLosses.push({
+        name: enemy.name,
+        hpLoss: result.hpLoss,
+        absorbed: result.absorbed,
+      });
+      return result;
+    });
+    log.push(
+      `${SUPPORT_WEAPON.name} strikes every surviving rival: ${supportLosses.map((loss) => `${loss.hpLoss} to ${loss.name}`).join(", ")}.`,
+    );
+  }
 
   const enemyLosses = [];
   const incomingDamage = Math.max(0, (intent?.damage ?? 0) - incomingReduction);
@@ -727,7 +913,7 @@ export function resolveRound(state, plan) {
       `${intent.actorName} uses ${intent.name}: ${enemyLosses.map((loss) => `${loss.hpLoss} to ${loss.name}`).join(", ")}.`,
     );
 
-  const damageDealt = playerLosses.reduce(
+  const damageDealt = [...playerLosses, ...supportLosses].reduce(
     (total, loss) => total + loss.hpLoss,
     0,
   );
@@ -827,6 +1013,32 @@ export function resolveRound(state, plan) {
     damageTaken: (priorStats.damageTaken ?? 0) + damageTaken,
     damagePrevented: (priorStats.damagePrevented ?? 0) + damagePrevented,
   };
+  const general = generalAbility
+    ? {
+        ...state.general,
+        cooldowns: generalAbility.cooldown
+          ? {
+              ...state.general.cooldowns,
+              [generalAbility.id]: state.round + generalAbility.cooldown,
+            }
+          : state.general.cooldowns,
+        charges: generalAbility.charges
+          ? {
+              ...state.general.charges,
+              [generalAbility.id]: Math.max(
+                0,
+                (state.general.charges?.[generalAbility.id] ?? 0) - 1,
+              ),
+            }
+          : state.general.charges,
+      }
+    : state.general;
+  const items = item
+    ? {
+        ...state.items,
+        [item.id]: Math.max(0, (state.items[item.id] ?? 0) - 1),
+      }
+    : state.items;
 
   return {
     ...state,
@@ -846,12 +1058,17 @@ export function resolveRound(state, plan) {
       damageDealt,
       damageTaken,
       damagePrevented,
-      playerLosses,
+      playerLosses: [...playerLosses, ...supportLosses],
       enemyLosses,
       intentName: intent?.name ?? "No enemy action",
       controlSource: plan.controlSource ?? "manual",
     },
     stats,
+    general,
+    items,
+    supportWeaponReady: plan.useSupportWeapon
+      ? false
+      : state.supportWeaponReady,
     outcome,
   };
 }
@@ -898,16 +1115,22 @@ function getLegalPlans(state) {
       for (const assistId of assists) {
         for (const target of enemies) {
           for (const tacticId of Object.keys(TACTICS)) {
-            for (const useSurge of surgeOptions) {
-              plans.push({
-                leadId: lead.id,
-                abilityId: ability.id,
-                assistId,
-                targetId: target.id,
-                tacticId,
-                useSurge,
-                controlSource: "ai",
-              });
+            for (const movementId of Object.keys(MOVEMENT_STRATEGIES)) {
+              for (const useSurge of surgeOptions) {
+                plans.push({
+                  leadId: lead.id,
+                  abilityId: ability.id,
+                  assistId,
+                  targetId: target.id,
+                  tacticId,
+                  movementId,
+                  useSurge,
+                  generalAbilityId: "",
+                  itemId: "",
+                  useSupportWeapon: false,
+                  controlSource: "ai",
+                });
+              }
             }
           }
         }
@@ -1008,8 +1231,8 @@ export function getCommandMastery(state) {
     },
     {
       id: "heroic-chain",
-      name: "Heroic Chain",
-      description: "Trigger at least 1 named hero chain",
+      name: "Hero Support",
+      description: "Trigger at least 1 named hero support combo",
       complete: (stats.combos ?? 0) >= 1,
     },
     {
