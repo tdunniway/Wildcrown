@@ -4,8 +4,11 @@ import test from "node:test";
 import {
   HERO_LIBRARY,
   TACTICS,
+  autoResolveCombat,
   abilityIsReady,
+  chooseCommandPlan,
   createCombatState,
+  getCommandMastery,
   getEnemyForecast,
   getEnemyIntent,
   previewRound,
@@ -87,7 +90,10 @@ test("a planned clash spends energy, applies support, and starts cooldowns", () 
 
   assert.equal(next.round, 2);
   assert.equal(next.energy, 2);
-  assert.deepEqual(next.enemies.map((enemy) => enemy.hp), [56, 72, 52]);
+  assert.deepEqual(
+    next.enemies.map((enemy) => enemy.hp),
+    [56, 72, 52],
+  );
   assert.equal(next.heroes[0].hp, 81);
   assert.equal(next.lastClash.tacticMatched, true);
   assert.equal(next.lastClash.combo.name, "Vanishing Point");
@@ -133,4 +139,44 @@ test("legal fallback play always reaches a result without deadlocking", () => {
 
   assert.ok(state.outcome, "combat should reach victory, defeat, or draw");
   assert.ok(resolvedRounds < 30, `combat took ${resolvedRounds} rounds`);
+});
+
+test("commander styles produce legal, explainable orders", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"]);
+
+  for (const style of ["balanced", "aggressive", "guardian"]) {
+    const choice = chooseCommandPlan(state, style);
+    assert.ok(choice);
+    assert.equal(validatePlan(state, choice.plan), null);
+    assert.match(choice.explanation, /Lyra|Torin|Vex/);
+    assert.ok(choice.preview.outgoing > 0);
+  }
+});
+
+test("auto resolve reaches a result and records every AI decision", () => {
+  const initial = createCombatState(["Lyra", "Torin", "Vex"]);
+  const resolved = autoResolveCombat(initial, "balanced");
+
+  assert.ok(resolved.state.outcome);
+  assert.equal(resolved.state.stats.rounds, resolved.decisions.length);
+  assert.equal(resolved.state.stats.aiRounds, resolved.decisions.length);
+  assert.equal(resolved.state.stats.manualRounds, 0);
+  assert.ok(resolved.decisions.every((decision) => decision.explanation));
+});
+
+test("command mastery awards bonuses for victory and optional objectives", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"]);
+  const mastery = getCommandMastery({
+    ...state,
+    outcome: "victory",
+    stats: {
+      ...state.stats,
+      hardCounters: 2,
+      combos: 1,
+    },
+  });
+
+  assert.equal(mastery.title, "Master Commander");
+  assert.equal(mastery.bonusPercent, 20);
+  assert.ok(mastery.objectives.every((objective) => objective.complete));
 });

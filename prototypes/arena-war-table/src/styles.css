@@ -27,7 +27,10 @@
 
   .command-deck {
     height: 31.5%;
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.72fr) minmax(0, 1.15fr) minmax(0, 0.92fr);
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.72fr) minmax(
+        0,
+        1.15fr
+      ) minmax(0, 0.92fr);
   }
 
   .combat-log {
@@ -74,7 +77,12 @@
   border: 1px solid rgb(217 169 76 / 45%);
   background:
     radial-gradient(circle at 50% 50%, rgb(49 122 130 / 22%), transparent 34%),
-    linear-gradient(90deg, rgb(5 31 39 / 95%), rgb(4 13 20 / 84%) 47% 53%, rgb(35 13 17 / 95%));
+    linear-gradient(
+      90deg,
+      rgb(5 31 39 / 95%),
+      rgb(4 13 20 / 84%) 47% 53%,
+      rgb(35 13 17 / 95%)
+    );
   box-shadow:
     inset 0 0 3rem rgb(1 7 11 / 72%),
     0 1rem 2.5rem rgb(0 0 0 / 42%);
@@ -115,7 +123,10 @@
   color: #f4e5bf;
   cursor: pointer;
   text-align: left;
-  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .battle-unit.is-rival {
@@ -284,7 +295,14 @@
 .clash-fx span {
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #7ef5ef, #fff1b2, #ff6c55, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #7ef5ef,
+    #fff1b2,
+    #ff6c55,
+    transparent
+  );
   box-shadow: 0 0 1.3rem #74eaf0;
   animation: clash-streak 720ms ease-in-out both;
 }
@@ -436,26 +454,59 @@
 }
 
 @keyframes clash-streak {
-  0% { opacity: 0; transform: scaleX(0.05); }
-  45% { opacity: 1; transform: scaleX(1); }
-  100% { opacity: 0; transform: scaleX(0.55); }
+  0% {
+    opacity: 0;
+    transform: scaleX(0.05);
+  }
+  45% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0.55);
+  }
 }
 
 @keyframes clash-title {
-  0% { opacity: 0; transform: scale(0.72); }
-  35%, 72% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.08); }
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  35%,
+  72% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
 }
 
 @keyframes ally-strike {
-  35% { transform: translateX(13%); filter: brightness(1.45); }
-  100% { transform: translateX(0); }
+  35% {
+    transform: translateX(13%);
+    filter: brightness(1.45);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 @keyframes float-damage {
-  0% { opacity: 0; transform: translateY(0.4rem) scale(0.75); }
-  35% { opacity: 1; transform: translateY(-0.2rem) scale(1); }
-  100% { opacity: 0; transform: translateY(-1.6rem) scale(1.08); }
+  0% {
+    opacity: 0;
+    transform: translateY(0.4rem) scale(0.75);
+  }
+  35% {
+    opacity: 1;
+    transform: translateY(-0.2rem) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-1.6rem) scale(1.08);
+  }
 }
 
 @media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
@@ -2172,7 +2223,10 @@ button:focus-visible {
 
   body .command-deck {
     height: 31.5%;
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.72fr) minmax(0, 1.15fr) minmax(0, 0.92fr);
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1.72fr) minmax(
+        0,
+        1.15fr
+      ) minmax(0, 0.92fr);
   }
 
   body .combat-log {
@@ -2216,5 +2270,408 @@ button:focus-visible {
 
   body .lock-column .lock-plan {
     min-height: 4.3rem;
+  }
+}
+
+/* Command Authority: one battle, four levels of player control. */
+.authority-setup-panel,
+.authority-dock {
+  border: 1px solid rgb(217 169 76 / 52%);
+  background: rgb(3 17 25 / 94%);
+  color: #b9c9ca;
+  box-shadow:
+    0 1rem 2.2rem rgb(0 0 0 / 38%),
+    inset 0 0 1.6rem rgb(43 113 122 / 10%);
+}
+
+.authority-setup-panel {
+  position: absolute;
+  z-index: 8;
+  top: 49.2%;
+  left: 1.2%;
+  width: 19.55%;
+  padding: 0.75%;
+}
+
+.authority-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.authority-setup-panel .authority-heading {
+  display: grid;
+  justify-content: stretch;
+  gap: 0.16rem;
+  margin-bottom: 0.55rem;
+}
+
+.authority-heading > strong,
+.authority-heading span strong {
+  display: block;
+  color: #f1d791;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.42rem, 0.72vw, 0.76rem);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.authority-heading > small,
+.authority-heading span small {
+  display: block;
+  color: #73cbd0;
+  font-size: clamp(0.25rem, 0.4vw, 0.43rem);
+  line-height: 1.35;
+}
+
+.authority-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.32rem;
+}
+
+.authority-mode-grid button,
+.authority-mode-strip button,
+.command-style-row button,
+.authority-toggle {
+  border: 1px solid rgb(72 119 127 / 56%);
+  background: #081f29;
+  color: #a9bec2;
+  cursor: pointer;
+}
+
+.authority-mode-grid button {
+  min-height: clamp(2.15rem, 3.6vw, 3.75rem);
+  padding: 0.38rem;
+  text-align: left;
+}
+
+.authority-mode-grid strong,
+.authority-mode-grid small {
+  display: block;
+}
+
+.authority-mode-grid strong {
+  color: #e7d2a0;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.3rem, 0.48vw, 0.52rem);
+}
+
+.authority-mode-grid small {
+  margin-top: 0.15rem;
+  color: #76949b;
+  font-size: clamp(0.23rem, 0.34vw, 0.37rem);
+}
+
+.authority-mode-grid button.is-selected,
+.authority-mode-strip button.is-selected,
+.command-style-row button.is-selected {
+  border-color: var(--teal);
+  background: #103744;
+  color: #f5dfa6;
+  box-shadow: inset 0 0 0.85rem rgb(50 199 220 / 15%);
+}
+
+.command-style-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.28rem;
+  margin-top: 0.45rem;
+}
+
+.command-style-row button {
+  min-width: 0;
+  padding: 0.34rem 0.2rem;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.22rem, 0.36vw, 0.39rem);
+}
+
+.authority-dock {
+  position: absolute;
+  z-index: 10;
+  top: 12.6%;
+  right: 1.2%;
+  width: 18.2%;
+  padding: 0.7%;
+}
+
+.authority-status {
+  flex: 0 0 auto;
+  padding: 0.22rem 0.34rem;
+  border: 1px solid rgb(217 169 76 / 48%);
+  color: #f0ce78;
+  font-size: clamp(0.23rem, 0.35vw, 0.38rem);
+  letter-spacing: 0.12em;
+}
+
+.authority-status.is-watch,
+.authority-status.is-auto {
+  border-color: rgb(50 199 220 / 72%);
+  color: #7be7ed;
+  animation: urgent-pulse 900ms ease-in-out infinite alternate;
+}
+
+.authority-mode-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.22rem;
+  margin-top: 0.55rem;
+}
+
+.authority-mode-strip button {
+  min-width: 0;
+  padding: 0.34rem 0.08rem;
+  overflow: hidden;
+  font-size: clamp(0.21rem, 0.32vw, 0.35rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-style-row.is-compact {
+  margin-top: 0.3rem;
+}
+
+.authority-toggle {
+  width: 100%;
+  margin-top: 0.42rem;
+  padding: 0.48rem;
+  border-color: rgb(217 169 76 / 76%);
+  color: #f2d78f;
+  font-family: Cinzel, Georgia, serif;
+  font-size: clamp(0.28rem, 0.44vw, 0.48rem);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.authority-mode-strip button:disabled,
+.command-style-row button:disabled,
+.authority-toggle:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.ai-insight {
+  position: absolute;
+  right: 4%;
+  bottom: 3.5%;
+  left: 4%;
+  padding: 0.42rem;
+  border: 1px solid rgb(50 199 220 / 42%);
+  background: rgb(3 21 29 / 88%);
+  text-align: left;
+}
+
+.ai-insight small {
+  color: #65d9e0;
+  font-size: clamp(0.22rem, 0.34vw, 0.37rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ai-insight p {
+  margin: 0.18rem 0 0;
+  color: #b9cbcd;
+  font-size: clamp(0.23rem, 0.37vw, 0.4rem);
+  line-height: 1.35;
+}
+
+.result-card {
+  width: min(46rem, 58%);
+  max-height: 88%;
+  overflow-y: auto;
+}
+
+.mastery-heading,
+.battle-ledger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.mastery-heading {
+  margin: 1rem 0 0.55rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid rgb(217 169 76 / 35%);
+  border-bottom: 1px solid rgb(217 169 76 / 35%);
+  text-align: left;
+}
+
+.mastery-heading small,
+.mastery-heading strong {
+  display: block;
+}
+
+.mastery-heading small,
+.battle-ledger small,
+.last-ai-call small {
+  color: #6bcbd2;
+  font-size: 0.62rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.mastery-heading strong {
+  margin-top: 0.1rem;
+  color: #f3d588;
+  font-family: Cinzel, Georgia, serif;
+}
+
+.mastery-heading b {
+  color: #f1c95e;
+  font-family: Cinzel, Georgia, serif;
+}
+
+.mastery-objectives {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.mastery-objectives > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.65rem;
+  border: 1px solid rgb(74 109 117 / 45%);
+  background: rgb(3 15 22 / 62%);
+  text-align: left;
+  opacity: 0.62;
+}
+
+.mastery-objectives > div.is-complete {
+  border-color: rgb(81 205 177 / 58%);
+  opacity: 1;
+}
+
+.mastery-objectives > div > span {
+  color: #63ddb8;
+}
+
+.mastery-objectives p,
+.result-card .mastery-objectives p {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.mastery-objectives strong,
+.mastery-objectives small {
+  display: block;
+}
+
+.mastery-objectives strong {
+  color: #e7d5a9;
+  font-size: 0.7rem;
+}
+
+.mastery-objectives small {
+  margin-top: 0.18rem;
+  font-size: 0.57rem;
+}
+
+.battle-ledger {
+  margin: 0.55rem 0;
+  padding: 0.55rem;
+  border: 1px solid rgb(50 199 220 / 26%);
+  background: rgb(7 35 44 / 54%);
+}
+
+.battle-ledger span {
+  flex: 1;
+}
+
+.battle-ledger small,
+.battle-ledger strong {
+  display: block;
+}
+
+.battle-ledger strong {
+  margin-top: 0.1rem;
+  color: #d8e4e3;
+  font-size: 0.68rem;
+}
+
+.result-card .last-ai-call {
+  margin: 0.65rem auto 1rem;
+  padding: 0.6rem;
+  border-left: 2px solid var(--teal);
+  background: rgb(5 23 31 / 72%);
+  font-size: 0.64rem;
+  text-align: left;
+}
+
+.last-ai-call small {
+  display: block;
+  margin-bottom: 0.18rem;
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
+  .authority-setup-panel,
+  .authority-dock {
+    position: relative;
+    z-index: 7;
+    inset: auto;
+    width: 100%;
+    padding: 0.75rem;
+  }
+
+  .authority-heading > strong,
+  .authority-heading span strong {
+    font-size: 0.78rem;
+  }
+
+  .authority-heading > small,
+  .authority-heading span small,
+  .authority-mode-grid small {
+    font-size: 0.58rem;
+  }
+
+  .authority-mode-grid button {
+    min-height: 3.4rem;
+    padding: 0.55rem;
+  }
+
+  .authority-mode-grid strong {
+    font-size: 0.68rem;
+  }
+
+  .command-style-row button,
+  .authority-mode-strip button,
+  .authority-toggle {
+    min-height: 2.6rem;
+    font-size: 0.58rem;
+  }
+
+  .authority-status {
+    font-size: 0.55rem;
+  }
+
+  .ai-insight {
+    right: 0.3rem;
+    bottom: 0.3rem;
+    left: 0.3rem;
+    padding: 0.45rem;
+  }
+
+  .ai-insight small,
+  .ai-insight p {
+    font-size: 0.52rem;
+  }
+
+  .result-card {
+    width: min(94vw, 36rem);
+    max-height: 90svh;
+  }
+
+  .mastery-objectives {
+    grid-template-columns: 1fr;
+  }
+
+  .battle-ledger {
+    align-items: stretch;
+    flex-direction: column;
+    text-align: left;
   }
 }

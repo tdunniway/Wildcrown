@@ -1,6 +1,32 @@
 export const MAX_ENERGY = 5;
 export const ROUND_RECOVERY = 2;
 
+export const COMMAND_STYLES = {
+  balanced: {
+    id: "balanced",
+    name: "Crownwise",
+    short: "Counter first, then press",
+    description: "Balances survival, counters, chains, and finishing pressure.",
+    weights: { damage: 1, safety: 1, prevention: 0.75, combo: 12 },
+  },
+  aggressive: {
+    id: "aggressive",
+    name: "Relentless",
+    short: "Break the weakest rival",
+    description:
+      "Prioritizes damage, executions, and Crown Surge opportunities.",
+    weights: { damage: 1.45, safety: 0.45, prevention: 0.3, combo: 8 },
+  },
+  guardian: {
+    id: "guardian",
+    name: "Iron Oath",
+    short: "Preserve the whole line",
+    description:
+      "Prioritizes hard counters, protection, and low-risk exchanges.",
+    weights: { damage: 0.65, safety: 1.5, prevention: 1.2, combo: 10 },
+  },
+};
+
 export const DOCTRINES = {
   scout: {
     id: "scout",
@@ -306,6 +332,17 @@ export function createCombatState(heroNames, doctrine = "scout") {
     debrief: null,
     lastClash: null,
     outcome: null,
+    stats: {
+      rounds: 0,
+      manualRounds: 0,
+      aiRounds: 0,
+      hardCounters: 0,
+      combos: 0,
+      surges: 0,
+      damageDealt: 0,
+      damageTaken: 0,
+      damagePrevented: 0,
+    },
   };
 }
 
@@ -538,17 +575,14 @@ export function resolveRound(state, plan) {
   let supportDisrupted = false;
   const doctrine = DOCTRINES[state.doctrine] ?? DOCTRINES.scout;
 
-  if (tactic.id === "intercept")
-    incomingReduction += tacticMatched ? 14 : 3;
-  if (tactic.id === "scatter")
-    incomingReduction += tacticMatched ? 8 : 1;
+  if (tactic.id === "intercept") incomingReduction += tacticMatched ? 14 : 3;
+  if (tactic.id === "scatter") incomingReduction += tacticMatched ? 8 : 1;
   if (tactic.id === "disrupt") {
     bonusDamage += tacticMatched ? 12 : 3;
     supportDisrupted = tacticMatched;
   }
   if (combo?.bonusDamage) bonusDamage += combo.bonusDamage;
-  if (combo?.incomingReduction)
-    incomingReduction += combo.incomingReduction;
+  if (combo?.incomingReduction) incomingReduction += combo.incomingReduction;
   if (surgeUsed) bonusDamage += 12;
   log.push(
     tacticMatched
@@ -728,22 +762,22 @@ export function resolveRound(state, plan) {
               summary: `${tactic.name} answered ${intent.name}: ${damagePrevented} denied while dealing ${damageDealt}.`,
             }
           : damagePrevented >= 8
-        ? {
-            grade: "Counter-read held",
-            summary: `${damagePrevented} damage denied while dealing ${damageDealt}.`,
-          }
-        : damageDealt >= damageTaken + 8
-          ? {
-              grade: "Favorable trade",
-              summary: `${damageDealt} dealt for ${damageTaken} taken. Pressure is yours.`,
-            }
-          : {
-              grade:
-                damageTaken > damageDealt
-                  ? "Rival found a gap"
-                  : "Even exchange",
-              summary: `${damageDealt} dealt for ${damageTaken} taken. Change the read or the support.`,
-            };
+            ? {
+                grade: "Counter-read held",
+                summary: `${damagePrevented} damage denied while dealing ${damageDealt}.`,
+              }
+            : damageDealt >= damageTaken + 8
+              ? {
+                  grade: "Favorable trade",
+                  summary: `${damageDealt} dealt for ${damageTaken} taken. Pressure is yours.`,
+                }
+              : {
+                  grade:
+                    damageTaken > damageDealt
+                      ? "Rival found a gap"
+                      : "Even exchange",
+                  summary: `${damageDealt} dealt for ${damageTaken} taken. Change the read or the support.`,
+                };
 
   const nextRound = state.round + 1;
   heroes = heroes.map((hero) => ({
@@ -778,6 +812,21 @@ export function resolveRound(state, plan) {
   const momentum = surgeUsed
     ? Math.min(3, momentumGain)
     : Math.min(3, state.momentum + momentumGain);
+  const priorStats = state.stats ?? {};
+  const stats = {
+    rounds: (priorStats.rounds ?? 0) + 1,
+    manualRounds:
+      (priorStats.manualRounds ?? 0) +
+      (plan.controlSource === "manual" ? 1 : 0),
+    aiRounds:
+      (priorStats.aiRounds ?? 0) + (plan.controlSource === "ai" ? 1 : 0),
+    hardCounters: (priorStats.hardCounters ?? 0) + (tacticMatched ? 1 : 0),
+    combos: (priorStats.combos ?? 0) + (combo ? 1 : 0),
+    surges: (priorStats.surges ?? 0) + (surgeUsed ? 1 : 0),
+    damageDealt: (priorStats.damageDealt ?? 0) + damageDealt,
+    damageTaken: (priorStats.damageTaken ?? 0) + damageTaken,
+    damagePrevented: (priorStats.damagePrevented ?? 0) + damagePrevented,
+  };
 
   return {
     ...state,
@@ -800,7 +849,9 @@ export function resolveRound(state, plan) {
       playerLosses,
       enemyLosses,
       intentName: intent?.name ?? "No enemy action",
+      controlSource: plan.controlSource ?? "manual",
     },
+    stats,
     outcome,
   };
 }
@@ -818,7 +869,170 @@ export function previewRound(state, plan) {
     prevented: clash.damagePrevented,
     combo: clash.combo,
     surgeUsed: clash.surgeUsed,
-    momentumGain:
-      (clash.tacticMatched ? 1 : 0) + (clash.combo ? 1 : 0),
+    momentumGain: (clash.tacticMatched ? 1 : 0) + (clash.combo ? 1 : 0),
+  };
+}
+
+function getLegalPlans(state) {
+  const plans = [];
+  const surgeOptions = state.momentum >= 3 ? [true, false] : [false];
+  const heroes = state.heroes.filter(living);
+  const enemies = state.enemies.filter(living);
+
+  for (const lead of heroes) {
+    const abilities = HERO_LIBRARY[lead.name].abilities.filter(
+      (ability) =>
+        ability.cost <= state.energy &&
+        abilityIsReady(lead, ability, state.round),
+    );
+    const assists = [
+      "brace",
+      ...heroes
+        .filter(
+          (hero) => hero.id !== lead.id && hero.assistReadyRound <= state.round,
+        )
+        .map((hero) => hero.id),
+    ];
+
+    for (const ability of abilities) {
+      for (const assistId of assists) {
+        for (const target of enemies) {
+          for (const tacticId of Object.keys(TACTICS)) {
+            for (const useSurge of surgeOptions) {
+              plans.push({
+                leadId: lead.id,
+                abilityId: ability.id,
+                assistId,
+                targetId: target.id,
+                tacticId,
+                useSurge,
+                controlSource: "ai",
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  return plans;
+}
+
+export function chooseCommandPlan(state, styleId = "balanced") {
+  const style = COMMAND_STYLES[styleId] ?? COMMAND_STYLES.balanced;
+  const forecast = getEnemyForecast(state);
+  const candidates = getLegalPlans(state).map((plan, index) => {
+    const preview = previewRound(state, plan);
+    const target = state.enemies.find((enemy) => enemy.id === plan.targetId);
+    const lead = state.heroes.find((hero) => hero.id === plan.leadId);
+    const ability = HERO_LIBRARY[lead.name].abilities.find(
+      (entry) => entry.id === plan.abilityId,
+    );
+    const executionBonus =
+      !ability.area && preview.outgoing >= target.hp ? 34 : 0;
+    const endangeredPenalty = state.heroes
+      .filter(living)
+      .reduce(
+        (total, hero) =>
+          total + (hero.hp <= 30 && preview.incoming > 0 ? 14 : 0),
+        0,
+      );
+    const score =
+      preview.outgoing * style.weights.damage -
+      preview.incoming * style.weights.safety +
+      preview.prevented * style.weights.prevention +
+      (preview.combo ? style.weights.combo : 0) +
+      (preview.grade === "Hard counter" ? 18 : 0) +
+      executionBonus -
+      endangeredPenalty +
+      (plan.useSurge ? 7 : 0) -
+      ability.cost * (styleId === "guardian" ? 1.2 : 0.35);
+    return { plan, preview, lead, ability, target, score, index };
+  });
+
+  candidates.sort((a, b) => b.score - a.score || a.index - b.index);
+  const best = candidates[0];
+  if (!best) return null;
+  const assistant =
+    best.plan.assistId === "brace"
+      ? null
+      : state.heroes.find((hero) => hero.id === best.plan.assistId);
+  const reasons = [];
+  if (best.plan.tacticId === forecast?.counterTactic)
+    reasons.push(
+      `${TACTICS[best.plan.tacticId].name} hard-counters ${forecast.headline}`,
+    );
+  if (best.preview.combo) reasons.push(`${best.preview.combo.name} is ready`);
+  if (!best.ability.area && best.preview.outgoing >= best.target.hp)
+    reasons.push(`${best.target.name} can be removed now`);
+  if (best.plan.useSurge) reasons.push("Crown Surge secures the advantage");
+  if (!reasons.length)
+    reasons.push(
+      `${best.preview.outgoing} projected damage for ${best.preview.incoming} incoming`,
+    );
+
+  return {
+    plan: best.plan,
+    preview: best.preview,
+    explanation: `${style.name}: ${best.lead.name} uses ${best.ability.name}${assistant ? ` with ${assistant.name}` : " while braced"}. ${reasons.join("; ")}.`,
+  };
+}
+
+export function autoResolveCombat(
+  initialState,
+  styleId = "balanced",
+  maxRounds = 24,
+) {
+  let state = initialState;
+  const decisions = [];
+  while (!state.outcome && decisions.length < maxRounds) {
+    const choice = chooseCommandPlan(state, styleId);
+    if (!choice) break;
+    decisions.push({
+      round: state.round,
+      explanation: choice.explanation,
+      plan: choice.plan,
+    });
+    state = resolveRound(state, choice.plan);
+  }
+  return { state, decisions };
+}
+
+export function getCommandMastery(state) {
+  const stats = state.stats ?? {};
+  const objectives = [
+    {
+      id: "read-field",
+      name: "Read the Field",
+      description: "Land at least 2 hard counters",
+      complete: (stats.hardCounters ?? 0) >= 2,
+    },
+    {
+      id: "heroic-chain",
+      name: "Heroic Chain",
+      description: "Trigger at least 1 named hero chain",
+      complete: (stats.combos ?? 0) >= 1,
+    },
+    {
+      id: "unbroken-line",
+      name: "Unbroken Line",
+      description: "Finish with every champion standing",
+      complete:
+        Boolean(state.outcome) && state.heroes.every((hero) => hero.hp > 0),
+    },
+  ];
+  const victoryBonus = state.outcome === "victory" ? 5 : 0;
+  const objectiveBonus =
+    objectives.filter((entry) => entry.complete).length * 5;
+  return {
+    objectives,
+    bonusPercent: Math.min(20, victoryBonus + objectiveBonus),
+    title:
+      objectiveBonus >= 15
+        ? "Master Commander"
+        : objectiveBonus >= 10
+          ? "Field Captain"
+          : objectiveBonus >= 5
+            ? "Tactician"
+            : "Battle Tested",
   };
 }

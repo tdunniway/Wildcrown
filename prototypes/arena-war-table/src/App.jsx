@@ -1,15 +1,48 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  COMMAND_STYLES,
   DOCTRINES,
   HERO_LIBRARY,
   TACTICS,
+  autoResolveCombat,
   abilityIsReady,
+  chooseCommandPlan,
   createCombatState,
+  getCommandMastery,
   getEnemyForecast,
   previewRound,
   resolveRound,
   validatePlan,
 } from "./combatEngine.js";
+
+const CONTROL_MODES = {
+  auto: {
+    id: "auto",
+    name: "Auto Resolve",
+    short: "Instant result",
+    description: "Your commander resolves the full battle immediately.",
+  },
+  watch: {
+    id: "watch",
+    name: "Watch",
+    short: "AI fights visibly",
+    description: "Watch every legal move and take command whenever you want.",
+  },
+  assist: {
+    id: "assist",
+    name: "Assisted",
+    short: "AI suggests, you decide",
+    description:
+      "Start with a complete recommendation, then edit or commit it.",
+  },
+  command: {
+    id: "command",
+    name: "Full Command",
+    short: "Control every order",
+    description:
+      "Choose every tactic, lead, ability, assist, target, and surge.",
+  },
+};
 
 const startingHeroes = [
   { name: "Lyra", level: 58 },
@@ -70,6 +103,10 @@ export function App() {
   const [combat, setCombat] = useState(null);
   const [plan, setPlan] = useState(null);
   const [lastImpact, setLastImpact] = useState(null);
+  const [controlMode, setControlMode] = useState("assist");
+  const [commandStyle, setCommandStyle] = useState("balanced");
+  const [aiInsight, setAiInsight] = useState("");
+  const [decisionHistory, setDecisionHistory] = useState([]);
 
   const available = useMemo(() => {
     const selectedNames = new Set(heroes.map((hero) => hero.name));
@@ -95,6 +132,12 @@ export function App() {
     () => (combat && plan ? previewRound(combat, plan) : null),
     [combat, plan],
   );
+  const mastery = useMemo(
+    () => (combat ? getCommandMastery(combat) : null),
+    [combat],
+  );
+  const ordersLocked =
+    phase === "resolving" || controlMode === "watch" || controlMode === "auto";
 
   function chooseHero(hero) {
     if (editingSlot === null) return;
@@ -112,16 +155,54 @@ export function App() {
     setToast(`${DOCTRINES[id].name} doctrine selected`);
   }
 
+  function getOpeningPlan(state, mode = controlMode) {
+    if (mode === "command") return buildDefaultPlan(state);
+    return (
+      chooseCommandPlan(state, commandStyle)?.plan ?? buildDefaultPlan(state)
+    );
+  }
+
+  function finishAutoResolve(state) {
+    const resolved = autoResolveCombat(state, commandStyle);
+    setCombat(resolved.state);
+    setDecisionHistory((current) => [...current, ...resolved.decisions]);
+    setAiInsight(
+      resolved.decisions.at(-1)?.explanation ??
+        `${COMMAND_STYLES[commandStyle].name} found no legal order.`,
+    );
+    setPhase("result");
+    setToast(
+      `${COMMAND_STYLES[commandStyle].name} resolved ${resolved.decisions.length} clashes`,
+    );
+  }
+
   function startCombat() {
     const initial = createCombatState(
       heroes.map((hero) => hero.name),
       doctrine,
     );
+    const opening = chooseCommandPlan(initial, commandStyle);
     setCombat(initial);
-    setPlan(buildDefaultPlan(initial));
+    setPlan(getOpeningPlan(initial));
     setLastImpact(null);
-    setPhase("battle");
-    setToast("Round 1 — read the rival, then answer");
+    setDecisionHistory([]);
+    setAiInsight(
+      controlMode === "command"
+        ? "Full authority is yours. Read the signal and build the answer."
+        : (opening?.explanation ?? "The commander is reading the rival line."),
+    );
+    if (controlMode === "auto") {
+      setPhase("resolving");
+      setToast("The commander is resolving the battle");
+      window.setTimeout(() => finishAutoResolve(initial), 760);
+    } else {
+      setPhase("battle");
+      setToast(
+        controlMode === "watch"
+          ? "Commander engaged — take control at any time"
+          : "Round 1 — read the rival, then answer",
+      );
+    }
   }
 
   function selectLead(hero) {
@@ -141,9 +222,12 @@ export function App() {
   }
 
   const commitCombat = useCallback(
-    () => {
+    (overridePlan = null, source = "manual", explanation = "") => {
       if (!combat || !plan || phase !== "battle") return;
-      const proposedPlan = plan;
+      const proposedPlan = {
+        ...(overridePlan ?? plan),
+        controlSource: source,
+      };
       const error = validatePlan(combat, proposedPlan);
       if (error) {
         setToast(error);
@@ -151,35 +235,116 @@ export function App() {
       }
 
       setPhase("resolving");
+      const proposedPreview = previewRound(combat, proposedPlan);
       setLastImpact({
         targetId: proposedPlan.targetId,
         actorId: proposedPlan.leadId,
         tacticId: proposedPlan.tacticId,
-        outgoing: preview?.outgoing ?? 0,
-        incoming: preview?.incoming ?? 0,
+        outgoing: proposedPreview?.outgoing ?? 0,
+        incoming: proposedPreview?.incoming ?? 0,
       });
       setToast("Plans revealed — clash resolving");
 
       window.setTimeout(() => {
         const next = resolveRound(combat, proposedPlan);
         setCombat(next);
+        if (source === "ai") {
+          setDecisionHistory((current) => [
+            ...current,
+            {
+              round: combat.round,
+              explanation:
+                explanation ||
+                `${COMMAND_STYLES[commandStyle].name} committed the order.`,
+              plan: proposedPlan,
+            },
+          ]);
+        }
         if (next.outcome) {
           setPhase("result");
         } else {
-          setPlan(buildDefaultPlan(next));
+          const nextChoice = chooseCommandPlan(next, commandStyle);
+          setPlan(
+            controlMode === "command"
+              ? buildDefaultPlan(next)
+              : (nextChoice?.plan ?? buildDefaultPlan(next)),
+          );
+          setAiInsight(
+            controlMode === "command"
+              ? "Full authority is yours. Build the next answer."
+              : (nextChoice?.explanation ?? "No recommendation available."),
+          );
           setPhase("battle");
           setToast(`Round ${next.round} — new rival signals detected`);
         }
       }, 720);
     },
-    [combat, phase, plan, preview],
+    [combat, commandStyle, controlMode, phase, plan],
   );
+
+  useEffect(() => {
+    if (
+      controlMode !== "watch" ||
+      phase !== "battle" ||
+      !combat ||
+      combat.outcome
+    )
+      return undefined;
+    const choice = chooseCommandPlan(combat, commandStyle);
+    if (!choice) return undefined;
+    const timer = window.setTimeout(
+      () => commitCombat(choice.plan, "ai", choice.explanation),
+      1100,
+    );
+    return () => window.clearTimeout(timer);
+  }, [combat, commandStyle, commitCombat, controlMode, phase]);
+
+  function changeControlMode(id) {
+    setControlMode(id);
+    if (!combat || phase === "setup" || phase === "result") return;
+    if (id === "auto" && phase === "battle") {
+      setPhase("resolving");
+      setToast("Commander is resolving the remaining battle");
+      window.setTimeout(() => finishAutoResolve(combat), 650);
+      return;
+    }
+    if (id === "command") {
+      setPlan(buildDefaultPlan(combat));
+      setAiInsight("You took command. Every order is now yours.");
+      setToast("Full Command engaged");
+      return;
+    }
+    const choice = chooseCommandPlan(combat, commandStyle);
+    if (choice) {
+      setPlan(choice.plan);
+      setAiInsight(choice.explanation);
+    }
+    setToast(
+      id === "watch"
+        ? "Orders delegated — take command at any time"
+        : "Assisted Command — review the recommendation",
+    );
+  }
+
+  function chooseCommandStyle(id) {
+    setCommandStyle(id);
+    if (combat && phase === "battle" && controlMode !== "command") {
+      const choice = chooseCommandPlan(combat, id);
+      if (choice) {
+        setPlan(choice.plan);
+        setAiInsight(choice.explanation);
+      }
+    }
+    setToast(`${COMMAND_STYLES[id].name} commander doctrine selected`);
+  }
 
   function restart() {
     setPhase("setup");
     setCombat(null);
     setPlan(null);
     setLastImpact(null);
+    setAiInsight("");
+    setDecisionHistory([]);
     setToast("Adjust your three or opening doctrine");
   }
 
@@ -269,8 +434,45 @@ export function App() {
               ))}
             </div>
 
+            <section
+              className="authority-setup-panel"
+              aria-label="Choose battle control"
+            >
+              <div className="authority-heading">
+                <p className="panel-kicker">Command authority</p>
+                <strong>{CONTROL_MODES[controlMode].name}</strong>
+                <small>{CONTROL_MODES[controlMode].description}</small>
+              </div>
+              <div className="authority-mode-grid">
+                {Object.values(CONTROL_MODES).map((entry) => (
+                  <button
+                    key={entry.id}
+                    className={controlMode === entry.id ? "is-selected" : ""}
+                    onClick={() => changeControlMode(entry.id)}
+                  >
+                    <strong>{entry.name}</strong>
+                    <small>{entry.short}</small>
+                  </button>
+                ))}
+              </div>
+              <div
+                className="command-style-row"
+                aria-label="Commander strategy"
+              >
+                {Object.values(COMMAND_STYLES).map((entry) => (
+                  <button
+                    key={entry.id}
+                    className={commandStyle === entry.id ? "is-selected" : ""}
+                    onClick={() => chooseCommandStyle(entry.id)}
+                  >
+                    {entry.name}
+                  </button>
+                ))}
+              </div>
+            </section>
+
             <button className="commit-button" onClick={startCombat}>
-              Enter arena
+              {controlMode === "auto" ? "Resolve battle" : "Enter arena"}
             </button>
           </>
         ) : combat && plan ? (
@@ -308,6 +510,54 @@ export function App() {
               </div>
             </header>
 
+            <aside className="authority-dock" aria-label="Command authority">
+              <div className="authority-heading">
+                <span>
+                  <small>Command authority</small>
+                  <strong>{CONTROL_MODES[controlMode].name}</strong>
+                </span>
+                <b className={`authority-status is-${controlMode}`}>
+                  {controlMode === "watch" ? "AI LIVE" : "YOU"}
+                </b>
+              </div>
+              <div className="authority-mode-strip">
+                {Object.values(CONTROL_MODES).map((entry) => (
+                  <button
+                    key={entry.id}
+                    className={controlMode === entry.id ? "is-selected" : ""}
+                    onClick={() => changeControlMode(entry.id)}
+                    disabled={phase === "resolving"}
+                    title={entry.description}
+                  >
+                    {entry.name.replace(" Resolve", "")}
+                  </button>
+                ))}
+              </div>
+              <div className="command-style-row is-compact">
+                {Object.values(COMMAND_STYLES).map((entry) => (
+                  <button
+                    key={entry.id}
+                    className={commandStyle === entry.id ? "is-selected" : ""}
+                    onClick={() => chooseCommandStyle(entry.id)}
+                    disabled={phase === "resolving"}
+                  >
+                    {entry.name}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="authority-toggle"
+                onClick={() =>
+                  changeControlMode(
+                    controlMode === "watch" ? "command" : "watch",
+                  )
+                }
+                disabled={phase === "resolving"}
+              >
+                {controlMode === "watch" ? "Take Command" : "Delegate Battle"}
+              </button>
+            </aside>
+
             <section
               className={`battlefield-board ${phase === "resolving" ? "is-clashing" : ""}`}
               aria-label="Arena battlefield"
@@ -321,9 +571,11 @@ export function App() {
                       key={hero.id}
                       className={`battle-unit is-ally ${plan.leadId === hero.id ? "is-selected" : ""} ${threatened ? "is-threatened" : ""} ${lastImpact?.actorId === hero.id && phase === "resolving" ? "is-striking" : ""} ${hpClass(hero.hp, hero.maxHp)}`}
                       onClick={() => hero.hp > 0 && selectLead(hero)}
-                      disabled={hero.hp <= 0 || phase === "resolving"}
+                      disabled={hero.hp <= 0 || ordersLocked}
                     >
-                      <span className="unit-sigil">{hero.name.slice(0, 1)}</span>
+                      <span className="unit-sigil">
+                        {hero.name.slice(0, 1)}
+                      </span>
                       <span className="unit-copy">
                         <strong>{hero.name}</strong>
                         <small>
@@ -374,6 +626,16 @@ export function App() {
                     {preview.combo && <b>{preview.combo.name} chain</b>}
                   </div>
                 )}
+                {aiInsight && (
+                  <div className="ai-insight">
+                    <small>
+                      {controlMode === "command"
+                        ? "Command brief"
+                        : "Why this order"}
+                    </small>
+                    <p>{aiInsight}</p>
+                  </div>
+                )}
                 {phase === "resolving" && (
                   <div className={`clash-fx is-${lastImpact?.tacticId}`}>
                     <span />
@@ -394,7 +656,7 @@ export function App() {
                       enemy.hp > 0 &&
                       setPlan((current) => ({ ...current, targetId: enemy.id }))
                     }
-                    disabled={enemy.hp <= 0 || phase === "resolving"}
+                    disabled={enemy.hp <= 0 || ordersLocked}
                   >
                     <span className="unit-sigil">{enemy.name.slice(0, 1)}</span>
                     <span className="unit-copy">
@@ -439,7 +701,7 @@ export function App() {
                           tacticId: entry.id,
                         }))
                       }
-                      disabled={phase === "resolving"}
+                      disabled={ordersLocked}
                     >
                       <span className="tactic-code">{entry.code}</span>
                       <span>
@@ -470,9 +732,7 @@ export function App() {
                               abilityId: entry.id,
                             }))
                           }
-                          disabled={
-                            !ready || !affordable || phase === "resolving"
-                          }
+                          disabled={!ready || !affordable || ordersLocked}
                         >
                           <span className="ability-cost">
                             {entry.cost || "—"} ◆
@@ -508,12 +768,12 @@ export function App() {
                               assistId: hero.id,
                             }))
                           }
-                          disabled={!ready || phase === "resolving"}
+                          disabled={!ready || ordersLocked}
                         >
                           <strong>{hero.name}</strong>
                           <small>
                             {ready
-                               ? `${HERO_LIBRARY[hero.name].assist.name} · ${HERO_LIBRARY[hero.name].assist.description}`
+                              ? `${HERO_LIBRARY[hero.name].assist.name} · ${HERO_LIBRARY[hero.name].assist.description}`
                               : `Ready round ${hero.assistReadyRound}`}
                           </small>
                         </button>
@@ -524,7 +784,7 @@ export function App() {
                     onClick={() =>
                       setPlan((current) => ({ ...current, assistId: "brace" }))
                     }
-                    disabled={phase === "resolving"}
+                    disabled={ordersLocked}
                   >
                     <strong>Brace</strong>
                     <small>8 shield · always ready</small>
@@ -544,7 +804,7 @@ export function App() {
                       useSurge: !current.useSurge,
                     }))
                   }
-                  disabled={combat.momentum < 3 || phase === "resolving"}
+                  disabled={combat.momentum < 3 || ordersLocked}
                 >
                   <strong>Crown Surge</strong>
                   <small>
@@ -555,10 +815,14 @@ export function App() {
                 </button>
                 <button
                   className="lock-plan"
-                  onClick={commitCombat}
-                  disabled={Boolean(planError) || phase === "resolving"}
+                  onClick={() => commitCombat()}
+                  disabled={Boolean(planError) || ordersLocked}
                 >
-                  {phase === "resolving" ? "Resolving clash…" : "Lock plan"}
+                  {phase === "resolving"
+                    ? "Resolving clash…"
+                    : controlMode === "watch"
+                      ? "Commander acting…"
+                      : "Lock plan"}
                   <small>
                     {planError ||
                       `${tactic?.name} · ${ability?.name} → ${combat.enemies.find((enemy) => enemy.id === plan.targetId)?.name}`}
@@ -658,6 +922,54 @@ export function App() {
                 {combat.debrief?.summary ??
                   "Adjust the doctrine, lead, and support to change the exchange."}
               </p>
+              {mastery && (
+                <>
+                  <div className="mastery-heading">
+                    <span>
+                      <small>Command mastery</small>
+                      <strong>{mastery.title}</strong>
+                    </span>
+                    <b>+{mastery.bonusPercent}% rewards</b>
+                  </div>
+                  <div className="mastery-objectives">
+                    {mastery.objectives.map((objective) => (
+                      <div
+                        key={objective.id}
+                        className={objective.complete ? "is-complete" : ""}
+                      >
+                        <span>{objective.complete ? "✓" : "○"}</span>
+                        <p>
+                          <strong>{objective.name}</strong>
+                          <small>{objective.description}</small>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="battle-ledger">
+                    <span>
+                      <small>Control</small>
+                      <strong>
+                        {combat.stats.manualRounds} manual ·{" "}
+                        {combat.stats.aiRounds} AI
+                      </strong>
+                    </span>
+                    <span>
+                      <small>Damage</small>
+                      <strong>{combat.stats.damageDealt} dealt</strong>
+                    </span>
+                    <span>
+                      <small>Defense</small>
+                      <strong>{combat.stats.damagePrevented} denied</strong>
+                    </span>
+                  </div>
+                  {decisionHistory.length > 0 && (
+                    <p className="last-ai-call">
+                      <small>Last commander decision</small>
+                      {decisionHistory.at(-1).explanation}
+                    </p>
+                  )}
+                </>
+              )}
               <div className="result-actions">
                 <button onClick={restart}>Adjust doctrine</button>
                 <button onClick={startCombat}>Replay rival</button>
