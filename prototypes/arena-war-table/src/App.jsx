@@ -208,6 +208,19 @@ export function App() {
           alt="Wildcrown Crown Arena war table"
         />
         <div className="screen-vignette" />
+        <header className="mobile-masthead">
+          <span>
+            <small>Wildcrown</small>
+            <strong>Crown Arena</strong>
+          </span>
+          <small>
+            {phase === "setup"
+              ? "Assemble your three"
+              : phase === "result"
+                ? "Clash complete"
+                : `Round ${combat?.round ?? 1} command`}
+          </small>
+        </header>
 
         {phase === "setup" ? (
           <>
@@ -569,14 +582,6 @@ export function App() {
             {toast}
           </button>
         )}
-      </section>
-      <section
-        className="portrait-notice"
-        aria-label="Landscape orientation required"
-      >
-        <p className="panel-kicker">Crown Arena</p>
-        <h1>Rotate to command the war table</h1>
-        <p>The combat plan needs the width of a landscape screen.</p>
       </section>
     </main>
   );
