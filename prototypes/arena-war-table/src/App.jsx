@@ -4,6 +4,7 @@ import {
   BATTLE_ITEMS,
   COMMAND_STYLES,
   DOCTRINES,
+  FORMATIONS,
   GENERAL_ABILITIES,
   HERO_LIBRARY,
   MOVEMENT_STRATEGIES,
@@ -45,7 +46,7 @@ const CONTROL_MODES = {
     name: "Full Command",
     short: "Control every order",
     description:
-      "Choose strategy, movement, tactic, lead, ability, support, target, and surge.",
+      "Choose formation, strategy, movement, tactic, lead, ability, support, target, and surge.",
   },
 };
 
@@ -63,6 +64,7 @@ const reserveHeroes = [
 ];
 
 const COMMAND_STEPS = [
+  { id: "formation", label: "Formation" },
   { id: "strategy", label: "Strategy" },
   { id: "movement", label: "Movement" },
   { id: "response", label: "Response" },
@@ -165,6 +167,7 @@ function buildDefaultPlan(state) {
     abilityId: lead ? HERO_LIBRARY[lead.name].abilities[0].id : "",
     assistId: assist?.id ?? "brace",
     targetId: target?.id ?? "",
+    formationId: "line",
     tacticId: "",
     movementId: "direct",
     useSurge: false,
@@ -221,7 +224,6 @@ export function App() {
     [combat],
   );
   const lead = combat?.heroes.find((hero) => hero.id === plan?.leadId) ?? null;
-  const tactic = TACTICS[plan?.tacticId] ?? null;
   const planError =
     combat && plan ? validatePlan(combat, plan) : "Choose a plan.";
   const preview = useMemo(
@@ -243,18 +245,19 @@ export function App() {
     controlMode === "auto";
 
   const commandSummaries = [
+    FORMATIONS[plan?.formationId]?.name ?? "Choose",
     COMMAND_STYLES[commandStyle]?.name ?? "Choose",
     MOVEMENT_STRATEGIES[plan?.movementId]?.name ?? "Choose",
     TACTICS[plan?.tacticId]?.name ?? "Choose",
     lead
-      ? HERO_LIBRARY[lead.name].abilities.find(
+      ? (HERO_LIBRARY[lead.name].abilities.find(
           (entry) => entry.id === plan?.abilityId,
-        )?.name ?? "Choose"
+        )?.name ?? "Choose")
       : "Choose lead",
     plan?.assistId === "brace"
       ? "Brace"
-      : combat?.heroes.find((hero) => hero.id === plan?.assistId)?.name ??
-        "Choose",
+      : (combat?.heroes.find((hero) => hero.id === plan?.assistId)?.name ??
+        "Choose"),
   ];
 
   const selectedAbility = lead
@@ -265,7 +268,8 @@ export function App() {
   const selectedAssist = combat?.heroes.find(
     (hero) => hero.id === plan?.assistId,
   );
-  const movementRead = MOVEMENT_READS[plan?.movementId] ?? MOVEMENT_READS.direct;
+  const movementRead =
+    MOVEMENT_READS[plan?.movementId] ?? MOVEMENT_READS.direct;
   const resolutionCallouts = [
     {
       eyebrow: MOVEMENT_STRATEGIES[plan?.movementId]?.name ?? "Formation",
@@ -486,21 +490,19 @@ export function App() {
   }, [commandStyle, controlMode, pendingResolution]);
 
   useEffect(() => {
-    if (
-      phase !== "resolving" ||
-      !pendingResolution ||
-      resolutionPaused
-    )
+    if (phase !== "resolving" || !pendingResolution || resolutionPaused)
       return undefined;
-    const timer = window.setTimeout(() => {
-      if (resolutionStep < RESOLUTION_BEATS.length - 1) {
-        setResolutionStep((current) => current + 1);
-      } else {
-        finishResolution();
-      }
-    },
-    (resolutionStep < RESOLUTION_BEATS.length - 1 ? 720 : 920) /
-      playbackSpeed);
+    const timer = window.setTimeout(
+      () => {
+        if (resolutionStep < RESOLUTION_BEATS.length - 1) {
+          setResolutionStep((current) => current + 1);
+        } else {
+          finishResolution();
+        }
+      },
+      (resolutionStep < RESOLUTION_BEATS.length - 1 ? 720 : 920) /
+        playbackSpeed,
+    );
     return () => window.clearTimeout(timer);
   }, [
     finishResolution,
@@ -751,11 +753,18 @@ export function App() {
                     {forecast?.actorName} · {forecast?.headline}
                   </strong>
                 </span>
-                <span className="intent-target">
-                  {forecast?.targetLabel}
-                  <small>{forecast?.description}</small>
-                </span>
+                <span className="intent-target">{forecast?.targetLabel}</span>
               </div>
+              {tacticalObjective && (
+                <div
+                  className={`header-objective ${tacticalObjective.predicted ? "is-secured" : "is-risk"}`}
+                  title={tacticalObjective.detail}
+                >
+                  <small>Round objective</small>
+                  <strong>{tacticalObjective.title}</strong>
+                  <span>{tacticalObjective.progress}</span>
+                </div>
+              )}
               <div className="momentum-chip">
                 <small>Crown</small>
                 <strong>{combat.momentum}/3</strong>
@@ -998,135 +1007,13 @@ export function App() {
                       {phase === "resolving" &&
                         resolutionStep === 4 &&
                         threatened && (
-                        <span className="floating-number is-damage">
-                          -{lastImpact?.incoming}
-                        </span>
-                      )}
+                          <span className="floating-number is-damage">
+                            -{lastImpact?.incoming}
+                          </span>
+                        )}
                     </button>
                   );
                 })}
-              </div>
-
-              <div className="clash-core" aria-live="polite">
-                <div className={`battle-map is-${plan.movementId}`}>
-                  <div className="battle-map-heading">
-                    <small>Live formation</small>
-                    <strong>
-                      {MOVEMENT_STRATEGIES[plan.movementId]?.name}
-                    </strong>
-                  </div>
-                  <div className="formation-read">
-                    <span>
-                      <small>Payoff</small>
-                      <strong>{movementRead.payoff}</strong>
-                    </span>
-                    <span>
-                      <small>Exposure</small>
-                      <strong>{movementRead.risk}</strong>
-                    </span>
-                  </div>
-                  {combat.heroes.map((hero, index) => {
-                    const enemy = combat.enemies[index];
-                    const isLead = hero.id === plan.leadId;
-                    const isTarget = enemy?.id === plan.targetId;
-                    const isThreatened = forecast?.targetIds.includes(hero.id);
-                    return (
-                      <div
-                        className={`battle-map-lane ${isLead ? "is-lead" : ""} ${isTarget ? "is-target" : ""} ${isThreatened ? "is-threatened" : ""}`}
-                        key={`map-${hero.id}`}
-                      >
-                        <span className="map-unit is-friendly">
-                          {hero.name}
-                        </span>
-                        <span className="range-band">
-                          <small>Lane {index + 1}</small>
-                          <strong>
-                            {phase === "resolving" &&
-                            resolutionStep === 4 &&
-                            isThreatened
-                              ? "Under fire"
-                              : phase === "resolving" &&
-                                  resolutionStep >= 2 &&
-                                  resolutionStep <= 3 &&
-                                  isLead &&
-                                  isTarget
-                                ? "Impact"
-                                : isLead && isTarget
-                              ? "Engaged"
-                              : isLead
-                                ? "Advancing"
-                                : isTarget
-                                  ? "Marked"
-                                  : "Holding"}
-                          </strong>
-                        </span>
-                        <span className="map-unit is-hostile">
-                          {enemy?.name ?? "Broken"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {tacticalObjective && (
-                  <div
-                    className={`round-objective ${tacticalObjective.predicted ? "is-secured" : "is-risk"}`}
-                  >
-                    <span>
-                      <small>Round objective</small>
-                      <strong>{tacticalObjective.title}</strong>
-                    </span>
-                    <p>{tacticalObjective.detail}</p>
-                    <b>
-                      {tacticalObjective.predicted ? "Likely secured" : "At risk"}
-                      <em>{tacticalObjective.progress}</em>
-                    </b>
-                  </div>
-                )}
-                <div className="intent-rune">
-                  <small>Rival move</small>
-                  <strong>{forecast?.headline}</strong>
-                  <span>{forecast?.description}</span>
-                </div>
-                <div className="counter-callout">
-                  <small>General's recommendation</small>
-                  <strong>{forecast?.counterLabel}</strong>
-                  <span>
-                    {tactic
-                      ? tactic.id === forecast?.counterTactic
-                        ? "Counter aligned"
-                        : "Line remains exposed"
-                      : "Choose your tactic"}
-                  </span>
-                </div>
-                {preview && !preview.error && (
-                  <div
-                    className={`clash-preview ${preview.grade === "Hard counter" ? "is-counter" : "is-partial"}`}
-                  >
-                    <strong>{preview.grade}</strong>
-                    <span>{preview.outgoing} outgoing</span>
-                    <span>{preview.incoming} incoming</span>
-                    <span>{preview.prevented} denied</span>
-                    {preview.combo && <b>{preview.combo.name} support</b>}
-                  </div>
-                )}
-                {aiInsight && (
-                  <div className="ai-insight">
-                    <small>
-                      {controlMode === "command"
-                        ? "General's advice"
-                        : "Why this order"}
-                    </small>
-                    <p>{aiInsight}</p>
-                  </div>
-                )}
-                {phase === "resolving" && (
-                  <div className={`clash-fx is-${lastImpact?.tacticId}`}>
-                    <span />
-                    <strong>
-                      {preview?.combo?.name ?? tactic?.name ?? "Clash"}
-                    </strong>
-                  </div>
-                )}
               </div>
 
               <div className="battle-side rival-line">
@@ -1195,10 +1082,41 @@ export function App() {
               </div>
 
               <div
-                className={`command-column strategy-column ${commandStep === 0 ? "is-command-active" : ""}`}
+                className={`command-column formation-column ${commandStep === 0 ? "is-command-active" : ""}`}
               >
                 <p className="combat-kicker">
-                  <span>1</span> Commander strategy
+                  <span>1</span> Army formation
+                </p>
+                <div className="formation-grid">
+                  {Object.values(FORMATIONS).map((entry) => (
+                    <button
+                      key={entry.id}
+                      className={`formation-card ${plan.formationId === entry.id ? "is-selected" : ""}`}
+                      onClick={() =>
+                        setPlan((current) => ({
+                          ...current,
+                          formationId: entry.id,
+                        }))
+                      }
+                      disabled={ordersLocked}
+                      aria-pressed={plan.formationId === entry.id}
+                      title={entry.description}
+                    >
+                      <span className="formation-code">{entry.code}</span>
+                      <span>
+                        <strong>{entry.name}</strong>
+                        <small>{entry.short}</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div
+                className={`command-column strategy-column ${commandStep === 1 ? "is-command-active" : ""}`}
+              >
+                <p className="combat-kicker">
+                  <span>2</span> Commander strategy
                 </p>
                 <div className="strategy-grid">
                   {Object.values(COMMAND_STYLES).map((entry) => (
@@ -1218,10 +1136,10 @@ export function App() {
               </div>
 
               <div
-                className={`command-column movement-column ${commandStep === 1 ? "is-command-active" : ""}`}
+                className={`command-column movement-column ${commandStep === 2 ? "is-command-active" : ""}`}
               >
                 <p className="combat-kicker">
-                  <span>2</span> Movement strategy
+                  <span>3</span> Movement strategy
                 </p>
                 <div className="movement-grid">
                   {Object.values(MOVEMENT_STRATEGIES).map((entry) => (
@@ -1256,10 +1174,10 @@ export function App() {
               </div>
 
               <div
-                className={`command-column tactic-column ${commandStep === 2 ? "is-command-active" : ""}`}
+                className={`command-column tactic-column ${commandStep === 3 ? "is-command-active" : ""}`}
               >
                 <p className="combat-kicker">
-                  <span>3</span> Tactical response
+                  <span>4</span> Tactical response
                 </p>
                 <div className="tactic-grid">
                   {Object.values(TACTICS).map((entry) => (
@@ -1285,10 +1203,10 @@ export function App() {
               </div>
 
               <div
-                className={`command-column ability-column ${commandStep === 3 ? "is-command-active" : ""}`}
+                className={`command-column ability-column ${commandStep === 4 ? "is-command-active" : ""}`}
               >
                 <p className="combat-kicker">
-                  <span>4</span> Lead ability · {lead?.name}
+                  <span>5</span> Lead ability · {lead?.name}
                 </p>
                 <div className="ability-grid">
                   {lead &&
@@ -1323,10 +1241,10 @@ export function App() {
               </div>
 
               <div
-                className={`command-column assist-column ${commandStep === 4 ? "is-command-active" : ""}`}
+                className={`command-column assist-column ${commandStep === 5 ? "is-command-active" : ""}`}
               >
                 <p className="combat-kicker">
-                  <span>5</span> Hero support
+                  <span>6</span> Hero support
                 </p>
                 <div className="assist-grid">
                   {combat.heroes
@@ -1378,7 +1296,9 @@ export function App() {
                   Back
                 </button>
                 <span>
-                  <small>Step {commandStep + 1} of 5</small>
+                  <small>
+                    Step {commandStep + 1} of {COMMAND_STEPS.length}
+                  </small>
                   <strong>{COMMAND_STEPS[commandStep].label}</strong>
                 </span>
                 {commandStep < COMMAND_STEPS.length - 1 ? (
@@ -1470,9 +1390,7 @@ export function App() {
                     {playbackSpeed}× speed
                   </button>
                   <button
-                    onClick={() =>
-                      setResolutionDetails((current) => !current)
-                    }
+                    onClick={() => setResolutionDetails((current) => !current)}
                   >
                     {resolutionDetails ? "Hide detail" : "Inspect"}
                   </button>

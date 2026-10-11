@@ -628,6 +628,126 @@
   }
 }
 
+/* Command flow v6: formation-first planning and a quieter battlefield. */
+.header-objective {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 0.12rem;
+  padding: 0.5rem 0.7rem;
+  overflow: hidden;
+  border: 1px solid rgb(217 169 76 / 52%);
+  background: linear-gradient(180deg, rgb(12 37 45 / 98%), rgb(4 17 23 / 98%));
+  box-shadow: 0 0.55rem 1.3rem rgb(0 0 0 / 38%);
+}
+
+.header-objective small,
+.header-objective strong,
+.header-objective span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-objective small {
+  color: #84ced1;
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.header-objective strong {
+  color: #f1d894;
+  font-family: Cinzel, Georgia, serif;
+  font-size: 0.86rem;
+}
+
+.header-objective span {
+  color: #a9bcbd;
+  font-size: 0.75rem;
+}
+
+.header-objective.is-secured {
+  border-color: rgb(77 205 178 / 74%);
+  box-shadow: inset 3px 0 0 #4dcdb2;
+}
+
+.header-objective.is-risk {
+  border-color: rgb(221 164 68 / 68%);
+}
+
+.formation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.formation-card {
+  min-width: 0;
+  min-height: 4.25rem;
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  border: 1px solid rgb(71 118 127 / 58%);
+  background: #081f29;
+  color: #d8e5e3;
+  cursor: pointer;
+  text-align: left;
+}
+
+.formation-card strong,
+.formation-card small {
+  display: block;
+}
+
+.formation-card strong {
+  color: #f0d58f;
+  font-family: Cinzel, Georgia, serif;
+  font-size: 0.875rem;
+}
+
+.formation-card small {
+  margin-top: 0.18rem;
+  color: #9eb2b4;
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.formation-code {
+  display: grid;
+  width: 2.15rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgb(217 169 76 / 54%);
+  border-radius: 50%;
+  color: #f2d482;
+  font-family: Cinzel, Georgia, serif;
+  font-size: 0.75rem;
+}
+
+.formation-card.is-selected {
+  border-color: #56d6d3;
+  background: linear-gradient(180deg, #123c48, #09222b);
+  box-shadow: inset 3px 0 0 #56d6d3;
+}
+
+.formation-card.is-selected::after {
+  content: "Selected";
+  color: #76e6e3;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.formation-card:disabled {
+  cursor: default;
+  filter: grayscale(0.72);
+  opacity: 0.42;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -3840,10 +3960,9 @@ button:focus-visible {
     right: 1.2%;
     bottom: 46%;
     left: 1.2%;
-    grid-template-columns: minmax(17rem, 1.18fr) minmax(15rem, 1fr) minmax(
-        17rem,
-        1.18fr
-      ) minmax(15rem, 1fr);
+    grid-template-columns:
+      minmax(17rem, 1.18fr) minmax(15rem, 1fr) minmax(17rem, 1.18fr)
+      minmax(15rem, 1fr);
     gap: 0.52rem;
     padding: 0.62rem;
   }
@@ -3857,10 +3976,9 @@ button:focus-visible {
     bottom: 10.8%;
     left: 1.2%;
     height: 34%;
-    grid-template-columns: minmax(11rem, 0.85fr) minmax(13rem, 1.05fr) minmax(
-        12rem,
-        0.95fr
-      ) minmax(17rem, 1.45fr) minmax(13rem, 1fr);
+    grid-template-columns:
+      minmax(11rem, 0.85fr) minmax(13rem, 1.05fr) minmax(12rem, 0.95fr)
+      minmax(17rem, 1.45fr) minmax(13rem, 1fr);
     gap: 0.35rem;
     padding: 0.55rem;
   }
@@ -4001,7 +4119,10 @@ button:focus-visible {
   left: 0.3rem;
   min-width: 1rem;
   color: rgb(221 198 138 / 72%);
-  font: 600 0.65rem/1 Cinzel, Georgia, serif;
+  font:
+    600 0.65rem/1 Cinzel,
+    Georgia,
+    serif;
 }
 
 .battle-map {
@@ -4141,7 +4262,10 @@ button:focus-visible {
 
 .round-objective strong {
   color: #f1d88e;
-  font: 600 0.78rem/1.2 Cinzel, Georgia, serif;
+  font:
+    600 0.78rem/1.2 Cinzel,
+    Georgia,
+    serif;
 }
 
 .round-objective p {
@@ -4217,7 +4341,10 @@ button:focus-visible {
   border: 1px solid rgb(241 203 109 / 72%);
   background: rgb(2 14 20 / 90%);
   color: #ffe7a0;
-  font: 700 clamp(0.72rem, 1.2vw, 1.05rem)/1 Cinzel, Georgia, serif;
+  font:
+    700 clamp(0.72rem, 1.2vw, 1.05rem)/1 Cinzel,
+    Georgia,
+    serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   box-shadow: 0 0 1.2rem rgb(90 230 231 / 22%);
@@ -4242,7 +4369,14 @@ button:focus-visible {
   left: 18%;
   width: 64%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #8ff8ef, #ffe79b, #ff7a65, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #8ff8ef,
+    #ffe79b,
+    #ff7a65,
+    transparent
+  );
   box-shadow: 0 0 1.25rem #75eef0;
   transform-origin: left center;
   animation: combat-beat-line 720ms ease both;
@@ -4375,7 +4509,10 @@ button:focus-visible {
 .round-debrief h2 {
   margin: 0.2rem 0 0;
   color: #f1d588;
-  font: 600 1.5rem/1.1 Cinzel, Georgia, serif;
+  font:
+    600 1.5rem/1.1 Cinzel,
+    Georgia,
+    serif;
 }
 
 .resolution-heading p,
@@ -4405,7 +4542,10 @@ button:focus-visible {
 
 .resolution-callout strong {
   color: #fff0b8;
-  font: 600 1.05rem/1.2 Cinzel, Georgia, serif;
+  font:
+    600 1.05rem/1.2 Cinzel,
+    Georgia,
+    serif;
 }
 
 .resolution-callout p {
@@ -4476,7 +4616,10 @@ button:focus-visible {
 .resolution-inspect strong,
 .debrief-metrics strong {
   color: #f2d785;
-  font: 600 1.15rem/1 Cinzel, Georgia, serif;
+  font:
+    600 1.15rem/1 Cinzel,
+    Georgia,
+    serif;
 }
 
 .resolution-actions {
@@ -4546,7 +4689,10 @@ button:focus-visible {
 
 .objective-result strong {
   color: #8cf3dc;
-  font: 700 1rem/1 Cinzel, Georgia, serif;
+  font:
+    700 1rem/1 Cinzel,
+    Georgia,
+    serif;
 }
 
 .objective-result p {
@@ -4701,7 +4847,9 @@ button:focus-visible {
 
 @media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
   body .combat-header {
-    grid-template-columns: minmax(4.25rem, 0.48fr) minmax(4.25rem, 0.48fr) minmax(0, 1.25fr);
+    grid-template-columns:
+      minmax(4.25rem, 0.48fr) minmax(4.25rem, 0.48fr)
+      minmax(0, 1.25fr);
     grid-template-areas:
       "round crown energy"
       "intent intent intent"
@@ -4743,7 +4891,10 @@ button:focus-visible {
     grid-area: actions;
     grid-column: 1 / -1;
     grid-row: 3;
-    grid-template-columns: minmax(0, 1.1fr) minmax(4.5rem, 0.72fr) minmax(5.75rem, 1.05fr);
+    grid-template-columns: minmax(0, 1.1fr) minmax(4.5rem, 0.72fr) minmax(
+        5.75rem,
+        1.05fr
+      );
   }
 
   body .combat-header .authority-select {
@@ -4971,7 +5122,10 @@ button:focus-visible {
 
   .command-dock-actions {
     display: grid;
-    grid-template-columns: minmax(4.5rem, 0.7fr) minmax(0, 1fr) minmax(5.5rem, 0.9fr);
+    grid-template-columns: minmax(4.5rem, 0.7fr) minmax(0, 1fr) minmax(
+        5.5rem,
+        0.9fr
+      );
     align-items: center;
     gap: 0.5rem;
     margin-top: 0.55rem;
@@ -5178,7 +5332,10 @@ button:focus-visible {
 
 .command-dock-actions {
   display: grid;
-  grid-template-columns: minmax(4.5rem, 0.72fr) minmax(0, 1fr) minmax(5.5rem, 0.9fr);
+  grid-template-columns: minmax(4.5rem, 0.72fr) minmax(0, 1fr) minmax(
+      5.5rem,
+      0.9fr
+    );
   align-items: center;
   gap: 0.5rem;
 }
@@ -5437,5 +5594,136 @@ button:focus-visible {
 
   .command-dock-actions strong {
     font-size: 0.95rem;
+  }
+}
+
+/* Final placement overrides for the formation-first command layout. */
+.command-progress {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+@media (min-width: 761px) and (min-aspect-ratio: 1 / 1) {
+  body .combat-header {
+    top: 1%;
+    height: 8.6%;
+    grid-template-columns:
+      3.75rem minmax(12rem, 1.15fr) minmax(11rem, 0.8fr) 4.5rem 7.5rem
+      minmax(19rem, 0.95fr);
+    gap: 0.38rem;
+  }
+
+  body .combat-header .intent-card {
+    min-height: 0;
+  }
+
+  body .combat-header .intent-target {
+    max-width: 7.5rem;
+    font-size: 0.75rem;
+  }
+
+  body .battlefield-board {
+    top: 10.7%;
+    grid-template-columns: minmax(14rem, 0.72fr) minmax(18rem, 1fr) minmax(
+        18rem,
+        1fr
+      );
+    gap: 0.65rem;
+  }
+
+  body .formation-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px), (max-aspect-ratio: 1 / 1) {
+  body .combat-header {
+    grid-template-columns: 4.25rem minmax(5.5rem, 1fr) 3.5rem 4.25rem;
+    grid-template-areas:
+      "round objective crown energy"
+      "intent intent intent intent"
+      "actions actions actions actions";
+    gap: 0.25rem;
+    overflow: hidden;
+  }
+
+  body .combat-header .intent-card {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    min-height: 3.75rem;
+  }
+
+  body .combat-header .intent-card small {
+    display: none;
+  }
+
+  body .combat-header .intent-card strong {
+    font-size: 0.82rem;
+    line-height: 1.18;
+  }
+
+  body .combat-header .intent-target {
+    display: none;
+  }
+
+  body .combat-header .header-objective {
+    grid-row: 1;
+    grid-column: 2;
+    min-height: 3.75rem;
+    padding: 0.4rem 0.45rem;
+  }
+
+  body .combat-header .header-objective small,
+  body .combat-header .header-objective em {
+    display: none;
+  }
+
+  body .combat-header .header-objective strong {
+    font-size: 0.76rem;
+    line-height: 1.15;
+  }
+
+  body .combat-header .momentum-chip,
+  body .combat-header .energy-chip {
+    min-height: 3.75rem;
+  }
+
+  body .combat-header .battle-status-actions {
+    grid-row: 3;
+    grid-column: 1 / -1;
+  }
+
+  body .combat-header .energy-chip small {
+    display: none;
+  }
+
+  body .combat-header .energy-chip strong {
+    font-size: 0.78rem;
+  }
+
+  .command-progress {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body .formation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body .formation-card {
+    min-height: 4.5rem;
+  }
+
+  .bottom-nav,
+  .phase-battle .bottom-nav,
+  .phase-resolving .bottom-nav,
+  .phase-result .bottom-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow-x: hidden;
+  }
+
+  .bottom-nav button {
+    min-width: 0;
+    padding-inline: 0.2rem;
+    font-size: 0.78rem;
   }
 }

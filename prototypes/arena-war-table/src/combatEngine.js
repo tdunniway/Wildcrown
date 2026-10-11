@@ -27,6 +27,39 @@ export const COMMAND_STYLES = {
   },
 };
 
+export const FORMATIONS = {
+  line: {
+    id: "line",
+    name: "Battle Line",
+    code: "BL",
+    short: "Stable damage & cover",
+    description:
+      "A disciplined line that keeps offense and protection balanced.",
+  },
+  wedge: {
+    id: "wedge",
+    name: "Crown Wedge",
+    code: "CW",
+    short: "+9 strike · +4 risk",
+    description: "Concentrate the army behind one decisive breakthrough.",
+  },
+  bulwark: {
+    id: "bulwark",
+    name: "Shield Wall",
+    code: "SW",
+    short: "Deny 10 · -3 strike",
+    description: "Close ranks to absorb a dangerous rival commitment.",
+  },
+  crescent: {
+    id: "crescent",
+    name: "Crescent Line",
+    code: "CL",
+    short: "Deny 7 volleys · +6 vs focus",
+    description:
+      "Spread against area fire or fold inward around a focused threat.",
+  },
+};
+
 export const DOCTRINES = {
   scout: {
     id: "scout",
@@ -591,6 +624,7 @@ export function validatePlan(state, plan) {
   if (!lead || !living(lead)) return "Choose a living lead.";
   if (!target || !living(target)) return "Choose a living rival.";
   if (!ability) return "Choose an ability.";
+  if (!FORMATIONS[plan.formationId]) return "Choose a formation.";
   if (!TACTICS[plan.tacticId]) return "Choose a tactical response.";
   if (!MOVEMENT_STRATEGIES[plan.movementId])
     return "Choose a movement strategy.";
@@ -697,6 +731,7 @@ export function resolveRound(state, plan) {
       ? null
       : state.heroes.find((hero) => hero.id === plan.assistId);
   const tactic = TACTICS[plan.tacticId];
+  const formation = FORMATIONS[plan.formationId];
   const movement = MOVEMENT_STRATEGIES[plan.movementId];
   const army = ARMY_TYPES[lead.armyId] ?? ARMY_TYPES.guard;
   const generalAbility = GENERAL_ABILITIES[plan.generalAbilityId] ?? null;
@@ -721,6 +756,18 @@ export function resolveRound(state, plan) {
   if (combo?.bonusDamage) bonusDamage += combo.bonusDamage;
   if (combo?.incomingReduction) incomingReduction += combo.incomingReduction;
   if (surgeUsed) bonusDamage += 12;
+  if (formation.id === "wedge") {
+    bonusDamage += 9;
+    incomingReduction -= 4;
+  }
+  if (formation.id === "bulwark") {
+    bonusDamage -= 3;
+    incomingReduction += 10;
+  }
+  if (formation.id === "crescent") {
+    if (intent?.area) incomingReduction += 7;
+    else bonusDamage += 6;
+  }
   if (movement.id === "direct") bonusDamage += 6;
   if (movement.id === "flank") {
     bonusDamage += 10;
@@ -749,6 +796,7 @@ export function resolveRound(state, plan) {
   );
   if (combo) log.push(`${combo.name}: ${combo.description}`);
   if (surgeUsed) log.push("Crown Surge adds 12 damage to the lead action.");
+  log.push(`${formation.name} sets the army's opening shape.`);
   log.push(`${lead.name}'s ${army.name} execute ${movement.name}.`);
   if (generalAbility)
     log.push(`General ${state.general.name} invokes ${generalAbility.name}.`);
@@ -1050,6 +1098,8 @@ export function resolveRound(state, plan) {
     log: [...log, ...state.log].slice(0, 8),
     debrief,
     lastClash: {
+      formationId: formation.id,
+      formationName: formation.name,
       tacticId: tactic.id,
       tacticName: tactic.name,
       tacticMatched,
@@ -1114,22 +1164,25 @@ function getLegalPlans(state) {
     for (const ability of abilities) {
       for (const assistId of assists) {
         for (const target of enemies) {
-          for (const tacticId of Object.keys(TACTICS)) {
-            for (const movementId of Object.keys(MOVEMENT_STRATEGIES)) {
-              for (const useSurge of surgeOptions) {
-                plans.push({
-                  leadId: lead.id,
-                  abilityId: ability.id,
-                  assistId,
-                  targetId: target.id,
-                  tacticId,
-                  movementId,
-                  useSurge,
-                  generalAbilityId: "",
-                  itemId: "",
-                  useSupportWeapon: false,
-                  controlSource: "ai",
-                });
+          for (const formationId of Object.keys(FORMATIONS)) {
+            for (const tacticId of Object.keys(TACTICS)) {
+              for (const movementId of Object.keys(MOVEMENT_STRATEGIES)) {
+                for (const useSurge of surgeOptions) {
+                  plans.push({
+                    leadId: lead.id,
+                    abilityId: ability.id,
+                    assistId,
+                    targetId: target.id,
+                    formationId,
+                    tacticId,
+                    movementId,
+                    useSurge,
+                    generalAbilityId: "",
+                    itemId: "",
+                    useSupportWeapon: false,
+                    controlSource: "ai",
+                  });
+                }
               }
             }
           }
@@ -1196,7 +1249,7 @@ export function chooseCommandPlan(state, styleId = "balanced") {
   return {
     plan: best.plan,
     preview: best.preview,
-    explanation: `${style.name}: ${best.lead.name} uses ${best.ability.name}${assistant ? ` with ${assistant.name}` : " while braced"}. ${reasons.join("; ")}.`,
+    explanation: `${style.name}: ${FORMATIONS[best.plan.formationId].name} sets the line; ${best.lead.name} uses ${best.ability.name}${assistant ? ` with ${assistant.name}` : " while braced"}. ${reasons.join("; ")}.`,
   };
 }
 

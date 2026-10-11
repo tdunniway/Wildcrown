@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  FORMATIONS,
   HERO_LIBRARY,
   TACTICS,
   autoResolveCombat,
@@ -37,6 +38,7 @@ function safePlan(state) {
     abilityId: ability.id,
     assistId: assist?.id ?? "brace",
     targetId: target.id,
+    formationId: "line",
     tacticId: getEnemyIntent(state).counterTactic,
     movementId: "direct",
     useSurge: false,
@@ -85,6 +87,7 @@ test("a planned clash spends energy, applies support, and starts cooldowns", () 
     abilityId: "arrow-storm",
     assistId: "vex-2",
     targetId: "branna-rival",
+    formationId: "line",
     tacticId: "disrupt",
     movementId: "ranged",
     useSurge: false,
@@ -159,6 +162,17 @@ test("hero armies reward matching movement strategies", () => {
     ranged.prevented > direct.prevented,
     "ranged movement should reduce retaliation",
   );
+});
+
+test("formations create distinct offensive and defensive trades", () => {
+  const state = createCombatState(["Lyra", "Torin", "Vex"]);
+  const base = safePlan(state);
+  const wedge = previewRound(state, { ...base, formationId: "wedge" });
+  const bulwark = previewRound(state, { ...base, formationId: "bulwark" });
+
+  assert.ok(FORMATIONS.wedge);
+  assert.ok(wedge.outgoing > bulwark.outgoing);
+  assert.ok(bulwark.incoming < wedge.incoming);
 });
 
 test("General powers, items, and the support weapon are limited resources", () => {
