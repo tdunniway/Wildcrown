@@ -1,6 +1,8 @@
 import {
   Bomb,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Crosshair,
   Crown,
   Flag,
@@ -57,182 +59,227 @@ function GeneralCard({
   ordersLocked,
   canTargetGeneral,
   generalUnderFire,
+  open,
+  onToggle,
 }) {
   const general = hostile ? combat.enemyGeneral : combat.general;
   const image = hostile ? "general-malrec.png" : "general-seraphine.png";
+  const meterValue = hostile ? general.hp : general.resolve;
+  const meterMax = hostile ? general.maxHp : 100;
+  const CollapseIcon = hostile ? ChevronRight : ChevronLeft;
+  const ExpandIcon = hostile ? ChevronLeft : ChevronRight;
 
   return (
     <aside
-      className={`commander-sheet ${hostile ? "enemy-commander" : "ally-commander"} ${generalUnderFire ? "is-under-fire" : ""}`}
+      className={`commander-sheet ${hostile ? "enemy-commander" : "ally-commander"} ${open ? "is-open" : "is-collapsed"} ${generalUnderFire ? "is-under-fire" : ""}`}
       aria-label={`${hostile ? "Enemy" : "Your"} General, ${general.name}`}
     >
-      <div className={`commander-portrait ${hostile ? "is-hostile" : ""}`}>
+      <button
+        type="button"
+        className={`commander-portrait-button ${hostile ? "is-hostile" : ""}`}
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-label={`${open ? "Collapse" : "Expand"} ${general.name}'s command panel`}
+        title={`${open ? "Collapse" : "Expand"} ${general.name}'s command panel`}
+      >
         <img src={asset(image)} alt="" />
         <span className="commander-rank">
           <Crown aria-hidden="true" />
         </span>
-      </div>
-
-      <div className="commander-sheet-body">
-        <div className="commander-identity-copy">
-          <small>{hostile ? "Enemy General" : "Your General"}</small>
-          <strong>{general.name}</strong>
-          <span>{general.title}</span>
-        </div>
-
-        {hostile ? (
-          <>
-            <div className="general-health-line">
-              <HealthBar value={general.hp} max={general.maxHp} hostile />
-              <b>
-                {general.hp}/{general.maxHp}
-              </b>
-            </div>
-            <div className="commander-stat-row">
-              <span>
-                <small>Threat</small>
-                <strong>{general.threat}</strong>
-              </span>
-              <span>
-                <small>Guard</small>
-                <strong>{general.guard}</strong>
-              </span>
-              <span>
-                <small>Will</small>
-                <strong>{general.will}</strong>
-              </span>
-            </div>
-            <div className="enemy-intel-card">
-              <Target aria-hidden="true" />
-              <span>
-                <small>Command tell</small>
-                <strong>{forecast?.headline}</strong>
-              </span>
-            </div>
-            <button
-              className={`focus-general-button ${plan.targetGeneral ? "is-selected" : ""}`}
-              onClick={() =>
-                setPlan((current) => ({
-                  ...current,
-                  targetGeneral: !current.targetGeneral,
-                }))
-              }
-              disabled={!canTargetGeneral || ordersLocked || general.hp <= 0}
-              title={
-                canTargetGeneral
-                  ? "Redirect qualifying damage to the enemy General"
-                  : "Equip a breaching power, area ability, or support weapon"
-              }
-            >
-              <Crosshair aria-hidden="true" />
-              <span>
-                {plan.targetGeneral ? "General targeted" : "Target General"}
-              </span>
-              {plan.targetGeneral && <Check aria-hidden="true" />}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="commander-stat-row">
-              <span>
-                <small>Level</small>
-                <strong>{general.level}</strong>
-              </span>
-              <span>
-                <small>Command</small>
-                <strong>{general.command}</strong>
-              </span>
-              <span>
-                <small>Resolve</small>
-                <strong>{general.resolve}</strong>
-              </span>
-            </div>
-            <div className="general-tool-section">
-              <small className="tool-label">Command powers</small>
-              <div className="cinematic-power-grid">
-                {Object.values(GENERAL_ABILITIES).map((entry, index) => {
-                  const PowerIcon = powerIcons[index] ?? Sparkles;
-                  const readyRound = combat.general.cooldowns[entry.id] ?? 1;
-                  const charges = combat.general.charges[entry.id];
-                  const available =
-                    readyRound <= combat.round &&
-                    (charges === undefined || charges > 0);
-                  return (
-                    <button
-                      key={entry.id}
-                      className={
-                        plan.generalAbilityId === entry.id ? "is-selected" : ""
-                      }
-                      onClick={() =>
-                        setPlan((current) => ({
-                          ...current,
-                          generalAbilityId:
-                            current.generalAbilityId === entry.id
-                              ? ""
-                              : entry.id,
-                          targetGeneral:
-                            entry.id === "decree"
-                              ? current.targetGeneral
-                              : false,
-                        }))
-                      }
-                      disabled={!available || ordersLocked}
-                      title={`${entry.name}: ${entry.short}`}
-                      aria-label={`${entry.name}: ${entry.short}`}
-                    >
-                      <PowerIcon aria-hidden="true" />
-                      <span>{entry.name}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="general-tool-section">
-              <small className="tool-label">Field kit</small>
-              <div className="cinematic-item-row">
-                {Object.values(BATTLE_ITEMS).map((entry, index) => {
-                  const ItemIcon = itemIcons[index] ?? Package;
-                  return (
-                    <button
-                      key={entry.id}
-                      className={plan.itemId === entry.id ? "is-selected" : ""}
-                      onClick={() =>
-                        setPlan((current) => ({
-                          ...current,
-                          itemId: current.itemId === entry.id ? "" : entry.id,
-                        }))
-                      }
-                      disabled={
-                        (combat.items[entry.id] ?? 0) <= 0 || ordersLocked
-                      }
-                      title={`${entry.name}: ${entry.short}`}
-                      aria-label={`${entry.name}, ${combat.items[entry.id] ?? 0} remaining`}
-                    >
-                      <ItemIcon aria-hidden="true" />
-                      <small>×{combat.items[entry.id] ?? 0}</small>
-                    </button>
-                  );
-                })}
-                <button
-                  className={plan.useSupportWeapon ? "is-selected" : ""}
-                  onClick={() =>
-                    setPlan((current) => ({
-                      ...current,
-                      useSupportWeapon: !current.useSupportWeapon,
-                    }))
-                  }
-                  disabled={!combat.supportWeaponReady || ordersLocked}
-                  title={`${SUPPORT_WEAPON.name}: ${SUPPORT_WEAPON.short}`}
-                  aria-label={`${SUPPORT_WEAPON.name}, ${combat.supportWeaponReady ? "ready" : "spent"}`}
-                >
-                  <Bomb aria-hidden="true" />
-                  <small>{combat.supportWeaponReady ? "1" : "0"}</small>
-                </button>
-              </div>
-            </div>
-          </>
+        <span className="commander-portrait-meter" aria-hidden="true">
+          <i
+            style={{
+              width: `${Math.max(0, Math.min(100, (meterValue / meterMax) * 100))}%`,
+            }}
+          />
+        </span>
+        <span className="commander-portrait-value" aria-hidden="true">
+          {meterValue}
+        </span>
+        {!open && (
+          <span className="commander-expand-cue" aria-hidden="true">
+            <ExpandIcon />
+          </span>
         )}
-      </div>
+      </button>
+
+      {open && (
+        <div className="commander-sheet-body">
+          <div className="commander-identity-copy">
+            <span>
+              <small>{hostile ? "Enemy General" : "Your General"}</small>
+              <strong>{general.name}</strong>
+              <em>{general.title}</em>
+            </span>
+            <button
+              type="button"
+              className="commander-collapse-button"
+              onClick={onToggle}
+              aria-label={`Collapse ${general.name}'s command panel`}
+              title="Collapse panel"
+            >
+              <CollapseIcon aria-hidden="true" />
+            </button>
+          </div>
+
+          {hostile ? (
+            <>
+              <div className="general-health-line">
+                <HealthBar value={general.hp} max={general.maxHp} hostile />
+                <b>
+                  {general.hp}/{general.maxHp}
+                </b>
+              </div>
+              <div className="commander-stat-row">
+                <span>
+                  <small>Threat</small>
+                  <strong>{general.threat}</strong>
+                </span>
+                <span>
+                  <small>Guard</small>
+                  <strong>{general.guard}</strong>
+                </span>
+                <span>
+                  <small>Will</small>
+                  <strong>{general.will}</strong>
+                </span>
+              </div>
+              <div className="enemy-intel-card">
+                <Target aria-hidden="true" />
+                <span>
+                  <small>Command tell</small>
+                  <strong>{forecast?.headline}</strong>
+                </span>
+              </div>
+              <button
+                className={`focus-general-button ${plan.targetGeneral ? "is-selected" : ""}`}
+                onClick={() =>
+                  setPlan((current) => ({
+                    ...current,
+                    targetGeneral: !current.targetGeneral,
+                  }))
+                }
+                disabled={!canTargetGeneral || ordersLocked || general.hp <= 0}
+                title={
+                  canTargetGeneral
+                    ? "Redirect qualifying damage to the enemy General"
+                    : "Equip a breaching power, area ability, or support weapon"
+                }
+              >
+                <Crosshair aria-hidden="true" />
+                <span>
+                  {plan.targetGeneral ? "General targeted" : "Target General"}
+                </span>
+                {plan.targetGeneral && <Check aria-hidden="true" />}
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="commander-stat-row">
+                <span>
+                  <small>Level</small>
+                  <strong>{general.level}</strong>
+                </span>
+                <span>
+                  <small>Command</small>
+                  <strong>{general.command}</strong>
+                </span>
+                <span>
+                  <small>Resolve</small>
+                  <strong>{general.resolve}</strong>
+                </span>
+              </div>
+              <div className="general-tool-section">
+                <small className="tool-label">Command powers</small>
+                <div className="cinematic-power-grid">
+                  {Object.values(GENERAL_ABILITIES).map((entry, index) => {
+                    const PowerIcon = powerIcons[index] ?? Sparkles;
+                    const readyRound = combat.general.cooldowns[entry.id] ?? 1;
+                    const charges = combat.general.charges[entry.id];
+                    const available =
+                      readyRound <= combat.round &&
+                      (charges === undefined || charges > 0);
+                    return (
+                      <button
+                        key={entry.id}
+                        className={
+                          plan.generalAbilityId === entry.id
+                            ? "is-selected"
+                            : ""
+                        }
+                        onClick={() =>
+                          setPlan((current) => ({
+                            ...current,
+                            generalAbilityId:
+                              current.generalAbilityId === entry.id
+                                ? ""
+                                : entry.id,
+                            targetGeneral:
+                              entry.id === "decree"
+                                ? current.targetGeneral
+                                : false,
+                          }))
+                        }
+                        disabled={!available || ordersLocked}
+                        title={`${entry.name}: ${entry.short}`}
+                        aria-label={`${entry.name}: ${entry.short}`}
+                      >
+                        <PowerIcon aria-hidden="true" />
+                        <span>{entry.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="general-tool-section">
+                <small className="tool-label">Field kit</small>
+                <div className="cinematic-item-row">
+                  {Object.values(BATTLE_ITEMS).map((entry, index) => {
+                    const ItemIcon = itemIcons[index] ?? Package;
+                    return (
+                      <button
+                        key={entry.id}
+                        className={
+                          plan.itemId === entry.id ? "is-selected" : ""
+                        }
+                        onClick={() =>
+                          setPlan((current) => ({
+                            ...current,
+                            itemId: current.itemId === entry.id ? "" : entry.id,
+                          }))
+                        }
+                        disabled={
+                          (combat.items[entry.id] ?? 0) <= 0 || ordersLocked
+                        }
+                        title={`${entry.name}: ${entry.short}`}
+                        aria-label={`${entry.name}, ${combat.items[entry.id] ?? 0} remaining`}
+                      >
+                        <ItemIcon aria-hidden="true" />
+                        <small>×{combat.items[entry.id] ?? 0}</small>
+                      </button>
+                    );
+                  })}
+                  <button
+                    className={plan.useSupportWeapon ? "is-selected" : ""}
+                    onClick={() =>
+                      setPlan((current) => ({
+                        ...current,
+                        useSupportWeapon: !current.useSupportWeapon,
+                      }))
+                    }
+                    disabled={!combat.supportWeaponReady || ordersLocked}
+                    title={`${SUPPORT_WEAPON.name}: ${SUPPORT_WEAPON.short}`}
+                    aria-label={`${SUPPORT_WEAPON.name}, ${combat.supportWeaponReady ? "ready" : "spent"}`}
+                  >
+                    <Bomb aria-hidden="true" />
+                    <small>{combat.supportWeaponReady ? "1" : "0"}</small>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </aside>
   );
 }
@@ -285,6 +332,8 @@ export function CinematicBattlefield({
   viewMode,
   setViewMode,
   selectLead,
+  generalPanels,
+  toggleGeneral,
 }) {
   const general = combat.enemyGeneral;
   const canTargetGeneral = Boolean(
@@ -400,9 +449,51 @@ export function CinematicBattlefield({
         forecast={forecast}
         ordersLocked={ordersLocked}
         canTargetGeneral={canTargetGeneral}
+        open={generalPanels.ally}
+        onToggle={() => toggleGeneral("ally")}
       />
 
       <div className="cinematic-clash-zone">
+        <div
+          className="battle-composition battle-composition-plan"
+          aria-hidden="true"
+        >
+          <span className="plan-lane plan-lane-flank">
+            <i />
+            Flank
+          </span>
+          <span className="plan-lane plan-lane-press">
+            <i />
+            Press
+          </span>
+          <span className="plan-lane plan-lane-hold">
+            <i />
+            Hold
+          </span>
+        </div>
+        <div
+          className="battle-composition battle-composition-clash"
+          aria-hidden="true"
+        >
+          <span>Impact focus</span>
+        </div>
+        <div
+          className="battle-composition battle-composition-tactical"
+          aria-hidden="true"
+        >
+          <span>
+            <b>Lane I</b>
+            <i />
+          </span>
+          <span>
+            <b>Lane II</b>
+            <i />
+          </span>
+          <span>
+            <b>Lane III</b>
+            <i />
+          </span>
+        </div>
         <div
           className={`warband ally-warband ${alliedStrike ? "is-acting" : ""} ${rivalStrike ? "is-hit" : ""}`}
         >
@@ -536,6 +627,8 @@ export function CinematicBattlefield({
         ordersLocked={ordersLocked}
         canTargetGeneral={canTargetGeneral}
         generalUnderFire={generalUnderFire}
+        open={generalPanels.enemy}
+        onToggle={() => toggleGeneral("enemy")}
       />
 
       <div className="turn-sequence" aria-label="Turn sequence">

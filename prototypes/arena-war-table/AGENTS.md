@@ -21,6 +21,8 @@ Before making substantial visual changes, use the Product Design plugin's `get-c
 - Keep the allied and rival hero lines visually adjacent. Do not place planning cards or redundant General recommendations between them; put the compact round objective in the top status bar and keep formation choices in the command flow.
 - Use a three-camera combat language: Plan is the default decision view, Clash becomes the cinematic execution view, and Tactical is an optional battlefield inspection view. Allow manual switching at any time it is safe.
 - Treat both Generals as battlefield actors. Each should collapse to a portrait rail or expand to a readable command sheet; the enemy General has health and can be damaged by clearly signposted General-targeting attacks.
+- When either General is collapsed, remove the sheet entirely and leave only the General portrait in the battlefield's top corner with its compact health/resolve meter. The portrait itself is the control that restores the full sheet.
+- The Plan, Clash, and Tactical cameras must change the battlefield composition and information hierarchy, not merely apply a zoom. Plan should resemble the original command-map concept, Clash should prioritize character action and impact, and Tactical should expose lanes, paths, and threat relationships.
 
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 

@@ -13,8 +13,9 @@ import {
   Flag,
   Footprints,
   Grid3X3,
-  LockKeyhole,
+  RefreshCw,
   Shield,
+  ShieldCheck,
   Sparkles,
   Swords,
   Target,
@@ -245,6 +246,10 @@ export function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [lastObjective, setLastObjective] = useState(null);
   const [viewMode, setViewMode] = useState("plan");
+  const [generalPanels, setGeneralPanels] = useState({
+    ally: true,
+    enemy: true,
+  });
 
   const available = useMemo(() => {
     const selectedNames = new Set(heroes.map((hero) => hero.name));
@@ -411,6 +416,7 @@ export function App() {
     setResolutionPaused(false);
     setLastObjective(null);
     setViewMode("plan");
+    setGeneralPanels({ ally: true, enemy: true });
     setAiInsight(
       controlMode === "command"
         ? "Full authority is yours. Read the signal and build the answer."
@@ -695,74 +701,117 @@ export function App() {
               <span className="setup-crest">
                 <Crown aria-hidden="true" />
               </span>
-              <span>
+              <span className="setup-title-copy">
                 <small>War council</small>
                 <h1>Assemble your strike force</h1>
                 <p>
-                  Choose three heroes, assign their armies, then set how much
-                  control you want.
+                  Build your line, choose the opening, then decide how closely
+                  you want to command the clash.
                 </p>
+                <ol className="setup-stage-track" aria-label="Setup progress">
+                  <li className="is-complete">
+                    <Check aria-hidden="true" />
+                    <span>Champions</span>
+                  </li>
+                  <li className="is-complete">
+                    <Check aria-hidden="true" />
+                    <span>Doctrine</span>
+                  </li>
+                  <li className="is-complete">
+                    <Check aria-hidden="true" />
+                    <span>Authority</span>
+                  </li>
+                </ol>
               </span>
               <span className="setup-readiness">
-                <BadgeCheck aria-hidden="true" />
-                <b>3 / 3 ready</b>
+                <ShieldCheck aria-hidden="true" />
+                <span>
+                  <small>Battle ready</small>
+                  <b>3 of 3 champions</b>
+                </span>
               </span>
             </header>
 
-            <div
-              className="setup-hero-grid"
-              aria-label="Selected champions and armies"
-            >
-              {heroes.map((hero, index) => {
-                const HeroIcon = SETUP_HERO_ICONS[index] ?? Swords;
-                return (
-                  <article
-                    className={`setup-hero-card ${editingSlot === index ? "is-editing" : ""}`}
-                    key={`${hero.name}-${index}`}
-                  >
-                    <div className="setup-hero-card-head">
-                      <span className="setup-slot">{index + 1}</span>
-                      <span className="setup-hero-medallion">
-                        <HeroIcon aria-hidden="true" />
-                      </span>
-                      <span className="setup-hero-copy">
-                        <small>{HERO_LIBRARY[hero.name].role}</small>
-                        <strong>{hero.name}</strong>
-                        <span>Level {hero.level}</span>
-                      </span>
-                      <button
-                        className="setup-change-hero"
-                        onClick={() => setEditingSlot(index)}
-                        aria-label={`Change ${hero.name}, slot ${index + 1}`}
-                      >
-                        Change
-                      </button>
-                    </div>
-                    <label className="setup-army-select">
-                      <span>
-                        <Flag aria-hidden="true" /> Army command
-                      </span>
-                      <span className="setup-select-wrap">
-                        <select
-                          value={hero.armyId}
-                          onChange={(event) =>
-                            assignArmy(index, event.target.value)
-                          }
-                          aria-label={`Army commanded by ${hero.name}`}
+            <section className="setup-squad" aria-label="Selected war party">
+              <div className="setup-squad-showcase">
+                <img
+                  src={`${import.meta.env.BASE_URL}assets/cinematic/allied-line.png`}
+                  alt="Lyra, Torin, and Vex assembled for battle"
+                />
+                <div className="setup-squad-banner">
+                  <span>
+                    <Sparkles aria-hidden="true" /> Selected war party
+                  </span>
+                  <strong>Three crowns. One command.</strong>
+                </div>
+                <div className="setup-squad-synergy">
+                  <Users aria-hidden="true" />
+                  <span>
+                    <small>Formation synergy</small>
+                    <strong>Balanced line · +12% cohesion</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div
+                className="setup-hero-grid"
+                aria-label="Selected champions and armies"
+              >
+                {heroes.map((hero, index) => {
+                  const HeroIcon = SETUP_HERO_ICONS[index] ?? Swords;
+                  return (
+                    <article
+                      className={`setup-hero-card setup-hero-${index + 1} ${editingSlot === index ? "is-editing" : ""}`}
+                      key={`${hero.name}-${index}`}
+                    >
+                      <div className="setup-hero-card-head">
+                        <span className="setup-slot">{index + 1}</span>
+                        <span className="setup-hero-medallion">
+                          <HeroIcon aria-hidden="true" />
+                        </span>
+                        <span className="setup-hero-copy">
+                          <small>{HERO_LIBRARY[hero.name].role}</small>
+                          <strong>{hero.name}</strong>
+                          <span>
+                            Level {hero.level}
+                            <i>Ready</i>
+                          </span>
+                        </span>
+                        <button
+                          className="setup-change-hero"
+                          onClick={() => setEditingSlot(index)}
+                          aria-label={`Change ${hero.name}, slot ${index + 1}`}
                         >
-                          {Object.values(ARMY_TYPES).map((army) => (
-                            <option value={army.id} key={army.id}>
-                              {army.name} · {army.short}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown aria-hidden="true" />
-                      </span>
-                    </label>
-                  </article>
-                );
-              })}
-            </div>
+                          <RefreshCw aria-hidden="true" />
+                          <span>Swap</span>
+                        </button>
+                      </div>
+                      <label className="setup-army-select">
+                        <span>
+                          <Flag aria-hidden="true" /> Army command
+                        </span>
+                        <span className="setup-select-wrap">
+                          <select
+                            value={hero.armyId}
+                            onChange={(event) =>
+                              assignArmy(index, event.target.value)
+                            }
+                            aria-label={`Army commanded by ${hero.name}`}
+                          >
+                            {Object.values(ARMY_TYPES).map((army) => (
+                              <option value={army.id} key={army.id}>
+                                {army.name} · {army.short}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown aria-hidden="true" />
+                        </span>
+                      </label>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
 
             <div className="setup-options-grid">
               <section
@@ -770,6 +819,7 @@ export function App() {
                 aria-label="Choose an opening doctrine"
               >
                 <div className="setup-panel-heading">
+                  <span className="setup-panel-step">2</span>
                   <Target aria-hidden="true" />
                   <span>
                     <small>Opening doctrine</small>
@@ -805,6 +855,7 @@ export function App() {
                 aria-label="Choose battle control"
               >
                 <div className="setup-panel-heading">
+                  <span className="setup-panel-step">3</span>
                   <BrainCircuit aria-hidden="true" />
                   <span>
                     <small>Command authority</small>
@@ -837,9 +888,12 @@ export function App() {
             </div>
 
             <footer className="setup-actionbar">
-              <span>
-                <LockKeyhole aria-hidden="true" />
-                <small>Setup locks after entry</small>
+              <span className="setup-action-ready">
+                <BadgeCheck aria-hidden="true" />
+                <span>
+                  <b>Battle plan ready</b>
+                  <small>Loadout locks after entry</small>
+                </span>
               </span>
               <span className="setup-loadout-summary">
                 <b>{DOCTRINES[doctrine].name}</b>
@@ -1236,6 +1290,13 @@ export function App() {
               viewMode={viewMode}
               setViewMode={setViewMode}
               selectLead={selectLead}
+              generalPanels={generalPanels}
+              toggleGeneral={(side) =>
+                setGeneralPanels((current) => ({
+                  ...current,
+                  [side]: !current[side],
+                }))
+              }
             />
 
             <section
