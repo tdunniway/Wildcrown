@@ -45,8 +45,8 @@
 
 ### Reference and implementation
 
-| Source reference | Implemented prototype |
-| --- | --- |
+| Source reference                                                                                                                                                             | Implemented prototype                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `public/assets/arena-war-table-reference.png` — cinematic blue/gold war table, three-champion formation, explicit rival line, opening orders, and a large commitment action. | `src/App.jsx` + `src/styles.css` — preserves the same visual hierarchy while turning the center board into a playable clash and adding Command Authority without replacing the established Wildcrown art direction. |
 
 Compared side by side at desktop landscape and a 500 × 900 narrow viewport on October 11, 2026.
@@ -145,3 +145,66 @@ Compared side by side at desktop landscape and a 500 × 900 narrow viewport on O
 ### Final result
 
 **Passed.**
+
+## Concept-led UI repair and hands-on audit — October 11, 2026
+
+This section supersedes the earlier blanket readiness claims above. The user rejected those revisions; this pass rebuilt the interface and checked actual interaction rather than treating a successful build as design approval. It is ready for user review, not a claim of 95% completion or exact visual matching.
+
+### Source and design decisions
+
+- Original references: the October 11 Plan (03_13_48 PM), Clash (03_13_30 PM), and Tactical (03_13_56 PM) images in `C:\Users\troy_\OneDrive\Desktop\Wildcrown`, plus the October 10 strikeforce setup concept.
+- General clarification: small square face plus compact horizontal panel. Clicking the portrait toggles it. Collapsed panels are removed, leaving only the portrait and its health/resolve meter.
+- Desktop requirement: the battle fits one screen with both General panels open. Mobile intentionally uses a vertically stacked interface.
+- New backgrounds preserve the concepts' different compositions: dark diagonal fortress/grid for Plan, large opposed characters in a lion courtyard for Clash, and a circular elevated arena with three lanes for Tactical. This is an adaptation to the current interactive prototype, not a pixel-exact clone.
+
+### Eleven-request verification matrix
+
+| Request                   | Implemented and checked                                                                                                                                                                             | Evidence                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 1. Planning setup         | Blue/gold strikeforce cards, individual champion art, selectable armies, opening doctrine and authority choices, clear Enter arena action. Hero replacement and army selection persist into battle. | `49-packaged-setup.jpg`; desktop and 320/390-pixel setup checks.                                 |
+| 2. Compact Generals       | Square portraits beside short horizontal panels; icon-led powers, quick items, catapult, and enemy stats. Both fit without displacing selectors.                                                    | `52-packaged-clash.jpg`; 1280 × 720 check.                                                       |
+| 3. Bottom menu            | Six compact summary tabs, one active decision surface, icon-led choices, Back/Next navigation.                                                                                                      | `50-packaged-plan.jpg`, `52-packaged-clash.jpg`.                                                 |
+| 4. Top bar                | Compact rival intent, round objective, resources, authority, Surge and Commit. No redundant long central information panel.                                                                         | All three packaged battle captures.                                                              |
+| 5. Step states            | Each tab names Required and Complete/Incomplete. Ability readiness, energy and support legality contribute to validity. Full Command with no response disables Commit; choosing Disrupt enables it. | Packaged manual flow; visible DOM states.                                                        |
+| 6. Surge                  | Framed lightning icon, charge count, explicit disabled/ready state.                                                                                                                                 | Packaged battle header.                                                                          |
+| 7. Hero selectors         | Small portraits, army/role context, HP meter, selected check, cyan/gold allied and red rival treatments.                                                                                            | `52-packaged-clash.jpg`.                                                                         |
+| 8. Enemy orientation      | Rival cutouts face left, opposed to right-facing allies.                                                                                                                                            | Clash capture and independent unit states.                                                       |
+| 9. Portrait-only collapse | Zero command panels remain after both portraits collapse. Faces are square (approximately 64 pixels desktop, 56 compact), with meters inside. Portrait click restores each panel.                   | `51-packaged-general-collapsed.jpg`.                                                             |
+| 10. Individual actors     | All six battlefield characters select their own unit; selectors stay visible with panels open. Idle, acting, hit and retaliating states are independent. Pause stops animations.                    | Hit-area audit; `46-combat-paused.jpg`, plus paused combat inspection and packaged manual round. |
+| 11. Distinct views        | Plan changes layout to a diagonal grid, Clash to large opposing fighters, Tactical to lane columns with movement/threat paths. Commit switches to Clash; planning returns to Plan.                  | `50-packaged-plan.jpg`, `52-packaged-clash.jpg`, `53-packaged-tactical.jpg`.                     |
+
+Evidence filenames in this section refer to `ux-repair-2026-10-11/`. Earlier captures retain intermediate defects and are not all final-state examples.
+
+### Hands-on audit and repairs
+
+- Desktop battle: 1440 × 900 and 1280 × 720 CSS pixels, both General panels expanded, no document overflow. Packaged build at 1440 × 900 measured document width 1440 and height 900.
+- Phone: 390 × 844 and 320 × 700 CSS pixels; setup and battle stay within viewport width. Vertical scrolling is intentional. Controls use a 44-pixel CSS minimum (browser geometry approximately 43.99 due to fractional scaling); primary text is 16 pixels and secondary text 14 pixels.
+- A real selection bug was found by clicking Torin on phone: overflowing decorative cutout children intercepted another hero's hit area. Decorative descendants now have `pointer-events: none`. After repair, the center of each of all six character buttons resolves to its own button; clicking Torin selects Torin.
+- Enemy stat labels initially overflowed the narrow panel; phone stats now use three columns with values below labels. Phone battlefield duplicate names are reduced while selector names and health remain available.
+- Plan art was corrected from an overly bright courtyard to the original dusk fortress direction. Compact Tactical labels and paths were aligned to the actual unit positions, and redundant center advice was removed.
+- Two legacy CSS asset URLs were double-prefixed for Vite's base path. They now use public asset paths; the assembled production build has no unresolved-asset warnings. Packaged preview reports zero broken images.
+- Full Command: missing response blocks Commit, choosing Disrupt enables it, commitment locks orders and enters the five-beat Clash. The packaged round dealt 38, took 14, denied 12, secured the objective, and reached the round-one debrief/round-two intent. See `54-packaged-combat-debrief.jpg`.
+- General powers, consumable items, support weapon and qualifying enemy-General damage were exercised on the dev build. Decree/Smoke/Catapult spent their charges, Malrec's HP decreased, and Aegis showed its cooldown state.
+- Watch and Auto Resolve were played through to victory. A mixed run recorded two manual and four AI rounds; Auto recorded zero manual and five AI rounds. No React state injection was used for these browser flows.
+- Paused resolution was inspected: acting and hit units differed from the remaining idle units, and each animation was paused. Reduced-motion CSS removes continuous/lunge animation.
+- Packaged browser warning/error log: no new warnings or errors during setup, all three views, collapse/expand and the manual combat flow.
+
+### Automated gates
+
+| Gate                       | Result                       | Full log                 |
+| -------------------------- | ---------------------------- | ------------------------ |
+| Root registry/core tests   | 6 passed                     | `final-repo-tests.log`   |
+| Combat engine tests        | 12 passed                    | `final-combat-tests.log` |
+| Sites routing/static tests | 4 passed                     | `final-sites-tests.log`  |
+| Assembled production build | Passed, no unresolved assets | `final-build.log`        |
+
+The 22 tests validate existing engine and packaging behavior; they are not an automated visual/accessibility certification. Screenshot, bounds and actual-click checks cover this interface pass separately.
+
+### Art archive and remaining limits
+
+- Six generated images were copied into the prototype, saved in the designated Wildcrown Drive image folder, and inserted into the existing Wildcrown Prototype Playbook above their retained source prompts. Existing document text was preserved.
+- Characters are independently animated 2D cutouts, not rigged 3D or skeletal actors. Mira's reserve art remains a clearly differentiated crest placeholder rather than a finished character illustration.
+- The three views follow the reference compositions but adapt panel anatomy, text and spacing to the user's later usability requirements. Exact image fidelity is not claimed.
+- Production is live at `https://wildcrown.vercel.app/prototypes/arena-war-table/`, deployment `dpl_3mwQq1QvmRnXsUfsXxwQwdpUaBQh`. The local packaged preview remains `http://127.0.0.1:4175/prototypes/arena-war-table/`.
+- The deployed game was checked through setup, all three views, General collapse/expand, required-choice gating and a real manual combat round (38 dealt, 14 taken, 12 denied). The main domain served the new JavaScript and artwork with no new console warnings/errors. Large artwork can take additional time to load on first visit.
+- Full logs and screenshots are retained locally in the evidence folder, not included in this source release. The user authorized production publication and a matching GitHub source push.

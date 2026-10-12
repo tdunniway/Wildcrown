@@ -10458,7 +10458,7 @@ body .battle-actor.is-selected {
   content: "";
   position: absolute;
   inset: 0;
-  background-image: url("/prototypes/arena-war-table/assets/cinematic/allied-line.png");
+  background-image: url("/assets/cinematic/allied-line.png");
   background-repeat: no-repeat;
   background-size: 340% auto;
   background-position: 8% 26%;
@@ -10474,7 +10474,7 @@ body .battle-actor.is-selected {
 }
 
 .battle-actor.is-rival .actor-sigil::before {
-  background-image: url("/prototypes/arena-war-table/assets/cinematic/rival-line.png");
+  background-image: url("/assets/cinematic/rival-line.png");
   transform: scaleX(-1);
 }
 
